@@ -1,0 +1,1459 @@
+openapi: 3.1.0
+info:
+  title: M&S Delivery System API
+  version: 1.0.0
+  description: Official REST API specification for M&S Delivery System (FastAPI backend on Vercel).
+servers:
+  - url: /api/v1
+    description: Current API v1 base path
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new customer
+      operationId: registerCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRegisterRequest'
+      responses:
+        '201':
+          description: Customer successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /auth/login:
+    post:
+      summary: Login user (Customer, Rider, or Admin)
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token using rotating refresh token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /auth/logout:
+    post:
+      summary: Revoke session and logout
+      operationId: logoutUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /auth/me:
+    get:
+      summary: Get current authenticated user details
+      operationId: getCurrentUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetailResponse'
+
+  /customers/addresses:
+    get:
+      summary: List saved addresses for current customer
+      operationId: listCustomerAddresses
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Address'
+    post:
+      summary: Save a new delivery address
+      operationId: createCustomerAddress
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+
+  /stores:
+    get:
+      summary: List stores
+      operationId: listStores
+      parameters:
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Store'
+    post:
+      summary: Create a new store (Admin only)
+      operationId: createStore
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+
+  /stores/{store_id}:
+    get:
+      summary: Get store details including menu categories and items
+      operationId: getStoreDetail
+      parameters:
+        - name: store_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreDetail'
+    put:
+      summary: Update store details (Admin only)
+      operationId: updateStore
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: store_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+
+  /menu-items:
+    post:
+      summary: Create a menu item (Admin only)
+      operationId: createMenuItem
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+
+  /menu-items/{item_id}:
+    put:
+      summary: Update menu item (Admin only)
+      operationId: updateMenuItem
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+    delete:
+      summary: Delete menu item (Admin only)
+      operationId: deleteMenuItem
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /orders/preview-fee:
+    post:
+      summary: Calculate estimated delivery fee and distance
+      operationId: previewDeliveryFee
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeePreviewRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeePreviewResponse'
+
+  /orders:
+    get:
+      summary: List orders (Customer gets own, Admin gets all, Rider gets assigned)
+      operationId: listOrders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+        - name: store_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+    post:
+      summary: Place a new COD order
+      operationId: createOrder
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+  /orders/{order_id}:
+    get:
+      summary: Get order details
+      operationId: getOrderDetail
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+
+  /orders/{order_id}/cancel:
+    post:
+      summary: Cancel an order (Customer if pending, Admin anytime with reason)
+      operationId: cancelOrder
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelOrderRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+  /orders/{order_id}/assign:
+    post:
+      summary: Assign order to a rider (Admin only)
+      operationId: assignOrderToRider
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignOrderRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+
+  /deliveries/{delivery_id}/status:
+    post:
+      summary: Transition delivery status (picked_up, on_the_way, delivered)
+      operationId: updateDeliveryStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: delivery_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryStatusUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Delivery'
+
+  /deliveries/{delivery_id}/location:
+    post:
+      summary: Ingest rider GPS position during active delivery
+      operationId: ingestRiderLocation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: delivery_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiderLocationBatchRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /deliveries/{delivery_id}/snapshot:
+    get:
+      summary: Get authoritative tracking snapshot (latest location, route, ETA)
+      operationId: getDeliverySnapshot
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: delivery_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliverySnapshot'
+
+  /riders:
+    get:
+      summary: List all riders with statuses (Admin only)
+      operationId: listRiders
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RiderProfileResponse'
+    post:
+      summary: Create a rider account (Admin only)
+      operationId: createRiderAccount
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRiderRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiderProfileResponse'
+
+  /riders/status:
+    put:
+      summary: Update rider availability status (available, busy, offline)
+      operationId: updateRiderStatus
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiderStatusUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiderProfileResponse'
+
+  /riders/active-delivery:
+    get:
+      summary: Get active assigned delivery for current rider
+      operationId: getRiderActiveDelivery
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+
+  /devices/token:
+    post:
+      summary: Register device FCM push token
+      operationId: registerDeviceToken
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceTokenRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /reports/sales:
+    get:
+      summary: Generate sales & order report
+      operationId: getSalesReport
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: store_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, csv]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesReportResponse'
+            text/csv:
+              schema:
+                type: string
+
+  /reports/riders:
+    get:
+      summary: Generate rider performance report
+      operationId: getRiderReport
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiderReportResponse'
+
+  /uploads/signed-url:
+    post:
+      summary: Request short-lived signed upload URL for menu/store image
+      operationId: getSignedUploadUrl
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignedUploadUrlRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignedUploadUrlResponse'
+
+  /uploads/finalize:
+    post:
+      summary: Finalize uploaded object
+      operationId: finalizeUpload
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinalizeUploadRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /cron/process-outbox:
+    post:
+      summary: Process and dispatch queued Firebase notifications (Vercel Cron)
+      operationId: processOutboxCron
+      parameters:
+        - name: x-cron-secret
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CronJobResponse'
+
+  /health/live:
+    get:
+      summary: Liveness probe
+      operationId: healthLive
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /health/ready:
+    get:
+      summary: Readiness probe
+      operationId: healthReady
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    ErrorResponse:
+      description: Standard error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetail'
+
+  schemas:
+    OrderStatus:
+      type: string
+      enum: [pending, confirmed, assigned, picked_up, on_the_way, delivered, cancelled]
+
+    PaymentStatus:
+      type: string
+      enum: [unpaid, paid]
+
+    RiderStatus:
+      type: string
+      enum: [available, busy, offline]
+
+    UserRole:
+      type: string
+      enum: [customer, rider, admin]
+
+    ErrorDetail:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    HealthStatus:
+      type: object
+      required: [status, timestamp]
+      properties:
+        status:
+          type: string
+          example: ok
+        timestamp:
+          type: string
+          format: date-time
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    CustomerRegisterRequest:
+      type: object
+      required: [email, password, full_name, phone]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        full_name:
+          type: string
+        phone:
+          type: string
+
+    RefreshTokenRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    AuthTokenResponse:
+      type: object
+      required: [access_token, refresh_token, token_type, expires_in, user]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          example: 3600
+        user:
+          $ref: '#/components/schemas/UserSummary'
+
+    UserSummary:
+      type: object
+      required: [id, email, full_name, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        full_name:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        phone:
+          type: string
+
+    UserDetailResponse:
+      type: object
+      required: [id, email, full_name, role, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        full_name:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        phone:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Address:
+      type: object
+      required: [id, label, address_line, latitude, longitude, is_default]
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+          example: Home
+        address_line:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        delivery_notes:
+          type: string
+        is_default:
+          type: boolean
+
+    AddressCreateRequest:
+      type: object
+      required: [label, address_line, latitude, longitude]
+      properties:
+        label:
+          type: string
+        address_line:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        delivery_notes:
+          type: string
+        is_default:
+          type: boolean
+          default: false
+
+    Store:
+      type: object
+      required: [id, name, address, latitude, longitude, is_active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        address:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        image_url:
+          type: string
+        is_active:
+          type: boolean
+
+    StoreCreateRequest:
+      type: object
+      required: [name, address, latitude, longitude]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        address:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        image_url:
+          type: string
+        is_active:
+          type: boolean
+          default: true
+
+    StoreUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        address:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        image_url:
+          type: string
+        is_active:
+          type: boolean
+
+    MenuCategory:
+      type: object
+      required: [id, name, display_order]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        display_order:
+          type: integer
+
+    MenuItem:
+      type: object
+      required: [id, store_id, name, price, is_available]
+      properties:
+        id:
+          type: string
+          format: uuid
+        store_id:
+          type: string
+          format: uuid
+        category_id:
+          type: string
+          format: uuid
+        category_name:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        image_url:
+          type: string
+        is_available:
+          type: boolean
+
+    MenuItemCreateRequest:
+      type: object
+      required: [store_id, name, price]
+      properties:
+        store_id:
+          type: string
+          format: uuid
+        category_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        image_url:
+          type: string
+        is_available:
+          type: boolean
+          default: true
+
+    MenuItemUpdateRequest:
+      type: object
+      properties:
+        category_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        image_url:
+          type: string
+        is_available:
+          type: boolean
+
+    StoreDetail:
+      type: object
+      required: [store, categories, items]
+      properties:
+        store:
+          $ref: '#/components/schemas/Store'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuCategory'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItem'
+
+    FeePreviewRequest:
+      type: object
+      required: [store_id, delivery_latitude, delivery_longitude]
+      properties:
+        store_id:
+          type: string
+          format: uuid
+        delivery_latitude:
+          type: number
+        delivery_longitude:
+          type: number
+
+    FeePreviewResponse:
+      type: object
+      required: [base_fee, distance_km, per_km_fee, total_delivery_fee, estimated_duration_minutes]
+      properties:
+        base_fee:
+          type: number
+        distance_km:
+          type: number
+        per_km_fee:
+          type: number
+        total_delivery_fee:
+          type: number
+        estimated_duration_minutes:
+          type: integer
+
+    OrderItemCreate:
+      type: object
+      required: [menu_item_id, quantity]
+      properties:
+        menu_item_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+        special_instructions:
+          type: string
+
+    OrderCreateRequest:
+      type: object
+      required: [store_id, address_id, items]
+      properties:
+        store_id:
+          type: string
+          format: uuid
+        address_id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemCreate'
+        notes:
+          type: string
+
+    OrderItem:
+      type: object
+      required: [id, menu_item_id, item_name, unit_price, quantity, subtotal]
+      properties:
+        id:
+          type: string
+          format: uuid
+        menu_item_id:
+          type: string
+          format: uuid
+        item_name:
+          type: string
+        unit_price:
+          type: number
+        quantity:
+          type: integer
+        subtotal:
+          type: number
+        special_instructions:
+          type: string
+
+    Payment:
+      type: object
+      required: [id, method, amount, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        method:
+          type: string
+          example: cash_on_delivery
+        amount:
+          type: number
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        collected_at:
+          type: string
+          format: date-time
+
+    Delivery:
+      type: object
+      required: [id, order_id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        order_id:
+          type: string
+          format: uuid
+        rider_id:
+          type: string
+          format: uuid
+        rider_name:
+          type: string
+        rider_phone:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        pickup_time:
+          type: string
+          format: date-time
+        delivered_time:
+          type: string
+          format: date-time
+        last_latitude:
+          type: number
+        last_longitude:
+          type: number
+        last_location_time:
+          type: string
+          format: date-time
+
+    Order:
+      type: object
+      required: [id, order_number, customer_id, store_id, store_name, status, subtotal, delivery_fee, total_amount, payment_status, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        order_number:
+          type: string
+        customer_id:
+          type: string
+          format: uuid
+        customer_name:
+          type: string
+        customer_phone:
+          type: string
+        store_id:
+          type: string
+          format: uuid
+        store_name:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        subtotal:
+          type: number
+        delivery_fee:
+          type: number
+        total_amount:
+          type: number
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatus'
+        delivery_address:
+          type: string
+        delivery_latitude:
+          type: number
+        delivery_longitude:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+
+    OrderDetail:
+      type: object
+      required: [order, items, payment]
+      properties:
+        order:
+          $ref: '#/components/schemas/Order'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        payment:
+          $ref: '#/components/schemas/Payment'
+        delivery:
+          $ref: '#/components/schemas/Delivery'
+
+    CancelOrderRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+
+    AssignOrderRequest:
+      type: object
+      required: [rider_id]
+      properties:
+        rider_id:
+          type: string
+          format: uuid
+
+    DeliveryStatusUpdateRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        cod_collected:
+          type: boolean
+          default: false
+        audit_reason:
+          type: string
+
+    RiderLocationPoint:
+      type: object
+      required: [latitude, longitude, timestamp]
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+        accuracy:
+          type: number
+        heading:
+          type: number
+        speed:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+
+    RiderLocationBatchRequest:
+      type: object
+      required: [locations]
+      properties:
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RiderLocationPoint'
+
+    DeliverySnapshot:
+      type: object
+      required: [delivery_id, order_id, status, store_location, destination_location]
+      properties:
+        delivery_id:
+          type: string
+          format: uuid
+        order_id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        rider_id:
+          type: string
+          format: uuid
+        rider_name:
+          type: string
+        rider_phone:
+          type: string
+        store_location:
+          type: object
+          properties:
+            latitude:
+              type: number
+            longitude:
+              type: number
+        destination_location:
+          type: object
+          properties:
+            latitude:
+              type: number
+            longitude:
+              type: number
+        last_rider_location:
+          $ref: '#/components/schemas/RiderLocationPoint'
+        eta_seconds:
+          type: integer
+        remaining_distance_meters:
+          type: number
+
+    CreateRiderRequest:
+      type: object
+      required: [email, password, full_name, phone, vehicle_type, plate_number]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        full_name:
+          type: string
+        phone:
+          type: string
+        vehicle_type:
+          type: string
+          example: Motorcycle
+        plate_number:
+          type: string
+
+    RiderProfileResponse:
+      type: object
+      required: [id, user_id, full_name, email, phone, status, vehicle_type, plate_number]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        status:
+          $ref: '#/components/schemas/RiderStatus'
+        vehicle_type:
+          type: string
+        plate_number:
+          type: string
+        active_delivery_id:
+          type: string
+          format: uuid
+
+    RiderStatusUpdateRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/RiderStatus'
+
+    DeviceTokenRequest:
+      type: object
+      required: [token, platform]
+      properties:
+        token:
+          type: string
+        platform:
+          type: string
+          enum: [android, ios, web]
+
+    SalesReportResponse:
+      type: object
+      required: [total_orders, total_sales, total_delivery_fees, orders]
+      properties:
+        total_orders:
+          type: integer
+        total_sales:
+          type: number
+        total_delivery_fees:
+          type: number
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+
+    RiderReportResponse:
+      type: object
+      required: [riders]
+      properties:
+        riders:
+          type: array
+          items:
+            type: object
+            properties:
+              rider_id:
+                type: string
+              rider_name:
+                type: string
+              completed_deliveries:
+                type: integer
+              total_distance_km:
+                type: number
+              average_delivery_time_minutes:
+                type: number
+
+    SignedUploadUrlRequest:
+      type: object
+      required: [filename, content_type, size_bytes]
+      properties:
+        filename:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+
+    SignedUploadUrlResponse:
+      type: object
+      required: [upload_url, object_path, public_url, expires_in]
+      properties:
+        upload_url:
+          type: string
+        object_path:
+          type: string
+        public_url:
+          type: string
+        expires_in:
+          type: integer
+
+    FinalizeUploadRequest:
+      type: object
+      required: [object_path]
+      properties:
+        object_path:
+          type: string
+
+    CronJobResponse:
+      type: object
+      required: [processed_count, failed_count]
+      properties:
+        processed_count:
+          type: integer
+        failed_count:
+          type: integer

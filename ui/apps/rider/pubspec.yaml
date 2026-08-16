@@ -1,0 +1,29 @@
+name: rider_app
+description: M&S Rider Flutter Application with Background Location Sharing and Offline Sync
+version: 1.0.0+1
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  domain_models:
+    path: ../../packages/domain_models
+  api_client:
+    path: ../../packages/api_client
+  auth_session:
+    path: ../../packages/auth_session
+  design_system:
+    path: ../../packages/design_system
+  provider: ^6.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

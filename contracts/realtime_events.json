@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "M&S Delivery Realtime Events Specification",
+  "channels": {
+    "delivery_location": {
+      "topic_template": "delivery:{delivery_id}:location",
+      "authorization": "Authenticated user must be either: (1) Order Owner Customer, (2) Assigned Rider, or (3) Admin.",
+      "events": {
+        "location.updated": {
+          "description": "Broadcasts high-precision rider GPS coordinates and bearing to customer/admin.",
+          "payload": {
+            "type": "object",
+            "required": ["delivery_id", "latitude", "longitude", "accuracy", "heading", "speed", "timestamp"],
+            "properties": {
+              "delivery_id": { "type": "string", "format": "uuid" },
+              "latitude": { "type": "number" },
+              "longitude": { "type": "number" },
+              "accuracy": { "type": "number" },
+              "heading": { "type": "number" },
+              "speed": { "type": "number" },
+              "eta_seconds": { "type": "integer" },
+              "remaining_distance_meters": { "type": "number" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    },
+    "delivery_status": {
+      "topic_template": "delivery:{delivery_id}:status",
+      "authorization": "Authenticated user must be either: (1) Order Owner Customer, (2) Assigned Rider, or (3) Admin.",
+      "events": {
+        "delivery.status_changed": {
+          "description": "Broadcasts state changes in delivery lifecycle (pending, confirmed, assigned, picked_up, on_the_way, delivered, cancelled).",
+          "payload": {
+            "type": "object",
+            "required": ["delivery_id", "order_id", "status", "timestamp"],
+            "properties": {
+              "delivery_id": { "type": "string", "format": "uuid" },
+              "order_id": { "type": "string", "format": "uuid" },
+              "status": {
+                "type": "string",
+                "enum": ["pending", "confirmed", "assigned", "picked_up", "on_the_way", "delivered", "cancelled"]
+              },
+              "payment_status": { "type": "string", "enum": ["unpaid", "paid"] },
+              "rider_name": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        },
+        "delivery.completed": {
+          "description": "Broadcasts successful COD collection and delivery finalization.",
+          "payload": {
+            "type": "object",
+            "required": ["delivery_id", "order_id", "delivered_time", "cod_collected"],
+            "properties": {
+              "delivery_id": { "type": "string", "format": "uuid" },
+              "order_id": { "type": "string", "format": "uuid" },
+              "delivered_time": { "type": "string", "format": "date-time" },
+              "cod_collected": { "type": "boolean" },
+              "total_amount": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
