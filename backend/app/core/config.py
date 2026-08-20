@@ -49,6 +49,20 @@ class Settings(BaseSettings):
     CRON_SECRET: str = "mns-cron-secret-key"
     LOCATION_RETENTION_DAYS: int = 30
 
+    @field_validator("DATABASE_URL", "DIRECT_DATABASE_URL", mode="before")
+    @classmethod
+    def normalize_database_url(cls, v):
+        if isinstance(v, str):
+            v_clean = v.strip().strip("'").strip('"')
+            # Normalize postgres:// to postgresql:// for SQLAlchemy
+            if v_clean.startswith("postgres://"):
+                v_clean = "postgresql://" + v_clean[len("postgres://"):]
+            elif v_clean.startswith("postgresql://") and not v_clean.startswith("postgresql+"):
+                # Ensure psycopg2 driver compatibility if available
+                v_clean = "postgresql+psycopg2://" + v_clean[len("postgresql://"):]
+            return v_clean
+        return v
+
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v):
@@ -60,3 +74,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+

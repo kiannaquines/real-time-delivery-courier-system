@@ -247,6 +247,29 @@ cloudflared tunnel --url http://127.0.0.1:3000 --http-host-header 0.0.0.0:3000
 
 ---
 
+## 🗄️ Connecting to Supabase & Migrating All Data
+
+The system supports both local SQLite and **Supabase PostgreSQL** with zero code changes. You can migrate all existing accounts, stores, menu items, orders, deliveries, and telemetry to Supabase in one command.
+
+### Step 1: Run the Supabase Migration Tool
+Run the migration script:
+```bash
+./migrate_to_supabase.py
+```
+Or specify your Supabase PostgreSQL connection string directly:
+```bash
+python migrate_to_supabase.py --target-url "postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres"
+```
+
+### What the Migration Tool Does Automatically:
+1. **Verifies Connectivity**: Tests the connection to your Supabase PostgreSQL cluster.
+2. **Initializes Schema & Tables**: Creates all tables, foreign keys, and indexes on Supabase.
+3. **Migrates All Records**: Transfers data from `mns_delivery.db` in topological FK order (`users`, `rider_profiles`, `addresses`, `stores`, `menu_categories`, `menu_items`, `orders`, `order_items`, `payments`, `deliveries`, `rider_locations`, `refresh_tokens`, `device_tokens`, `outbox_events`, `audit_logs`, `idempotency_keys`).
+4. **Data Integrity Audit**: Runs an automated table-by-table record count comparison between SQLite and Supabase.
+5. **Configures `.env`**: Automatically updates `DATABASE_URL` in your `.env` so the backend immediately connects to Supabase.
+
+---
+
 ## 🔑 Default Test Credentials
 
 All accounts come pre-seeded and ready to use:
