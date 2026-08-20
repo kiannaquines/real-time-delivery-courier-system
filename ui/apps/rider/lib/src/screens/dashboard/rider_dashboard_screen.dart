@@ -370,16 +370,25 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('Collect from Customer (COD)', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w700)),
-                                    Text(Formatters.currency(_activeDelivery!.order.totalAmount), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.brandPrimary)),
-                                  ],
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Collect (COD)', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w700)),
+                                      Text(
+                                        Formatters.currency(_activeDelivery!.order.totalAmount),
+                                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.brandPrimary),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                                const SizedBox(width: 8),
                                 ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  ),
                                   icon: const Icon(Icons.navigation_rounded, size: 16),
-                                  label: const Text('View Delivery →'),
+                                  label: const Text('View →'),
                                   onPressed: () async {
                                     await Navigator.of(context).push(MaterialPageRoute(
                                       builder: (_) => ActiveDeliveryScreen(orderDetail: _activeDelivery!),
