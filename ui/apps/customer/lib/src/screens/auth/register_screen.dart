@@ -53,144 +53,115 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
-      backgroundColor: AppColors.brandSecondary,
-      body: Stack(
-        children: [
-          // Header Decorative Area
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: size.height * 0.32,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: AppColors.darkCardGradient,
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: Column(
-                    children: [
-                      Align(
-                        alignment: Alignment.topLeft,
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Sign Up',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Please sign up to get started ordering food',
-                        style: TextStyle(fontSize: 13, color: Colors.white70),
-                      ),
-                    ],
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Text('Create Account'),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Sign Up',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                ),
-              ),
-            ),
-          ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Order food from local restaurants in Kabacan.',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 24),
 
-          // Main Form Card
-          Positioned(
-            top: size.height * 0.28,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 20,
-                    offset: Offset(0, -4),
+                  if (_error != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEE2E2),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 13, fontWeight: FontWeight.w600))),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(22),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          AppTextField(
+                            controller: _nameCtrl,
+                            label: 'FULL NAME',
+                            hintText: 'Juan Dela Cruz',
+                            prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.brandPrimary, size: 20),
+                          ),
+                          const SizedBox(height: 16),
+                          AppTextField(
+                            controller: _emailCtrl,
+                            label: 'EMAIL',
+                            hintText: 'juan@example.com',
+                            keyboardType: TextInputType.emailAddress,
+                            prefixIcon: const Icon(Icons.email_outlined, color: AppColors.brandPrimary, size: 20),
+                          ),
+                          const SizedBox(height: 16),
+                          AppTextField(
+                            controller: _phoneCtrl,
+                            label: 'PHONE NUMBER',
+                            hintText: '+63 917 123 4567',
+                            keyboardType: TextInputType.phone,
+                            prefixIcon: const Icon(Icons.phone_outlined, color: AppColors.brandPrimary, size: 20),
+                          ),
+                          const SizedBox(height: 16),
+                          AppTextField(
+                            controller: _passwordCtrl,
+                            label: 'PASSWORD',
+                            hintText: '••••••••••••',
+                            obscureText: true,
+                            prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.brandPrimary, size: 20),
+                          ),
+                          const SizedBox(height: 16),
+                          AppTextField(
+                            controller: _confirmPassCtrl,
+                            label: 'CONFIRM PASSWORD',
+                            hintText: '••••••••••••',
+                            obscureText: true,
+                            prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 24),
+                          AppButton(
+                            text: 'CREATE ACCOUNT',
+                            isLoading: _isLoading,
+                            onPressed: _handleRegister,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (_error != null) ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.statusCancelledBg,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.statusCancelledFg.withOpacity(0.3)),
-                          ),
-                          child: Text(_error!, style: const TextStyle(color: AppColors.statusCancelledFg, fontSize: 13)),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      AppTextField(
-                        controller: _nameCtrl,
-                        label: 'NAME',
-                        hintText: 'John Doe',
-                        prefixIcon: const Icon(Icons.person_outline, color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 16),
-                      AppTextField(
-                        controller: _emailCtrl,
-                        label: 'EMAIL',
-                        hintText: 'example@gmail.com',
-                        keyboardType: TextInputType.emailAddress,
-                        prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 16),
-                      AppTextField(
-                        controller: _phoneCtrl,
-                        label: 'PHONE NUMBER',
-                        hintText: '+63 917 123 4567',
-                        keyboardType: TextInputType.phone,
-                        prefixIcon: const Icon(Icons.phone_outlined, color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 16),
-                      AppTextField(
-                        controller: _passwordCtrl,
-                        label: 'PASSWORD',
-                        hintText: '••••••••••••',
-                        obscureText: true,
-                        prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 16),
-                      AppTextField(
-                        controller: _confirmPassCtrl,
-                        label: 'RE-TYPE PASSWORD',
-                        hintText: '••••••••••••',
-                        obscureText: true,
-                        prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 28),
-                      AppButton(
-                        text: 'SIGN UP',
-                        isLoading: _isLoading,
-                        onPressed: _handleRegister,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

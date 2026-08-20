@@ -8,6 +8,7 @@ import '../store/store_menu_screen.dart';
 import '../cart/cart_screen.dart';
 import '../history/order_history_screen.dart';
 import '../profile/profile_screen.dart';
+import '../profile/saved_addresses_screen.dart';
 import '../../state/cart_state.dart';
 
 class CustomerHomeScreen extends StatefulWidget {
@@ -20,24 +21,38 @@ class CustomerHomeScreen extends StatefulWidget {
 class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   int _currentTab = 0;
   List<Store> _stores = [];
+  Address? _currentAddress;
   bool _isLoading = true;
   String? _error;
   String _selectedCategory = 'All';
   String _searchQuery = '';
 
   final List<Map<String, dynamic>> _quickCategories = const [
-    {'name': 'All', 'icon': Icons.restaurant, 'price': ''},
-    {'name': 'Burger', 'icon': Icons.lunch_dining, 'price': '₱50'},
-    {'name': 'Chicken', 'icon': Icons.kebab_dining, 'price': '₱120'},
-    {'name': 'Pizza', 'icon': Icons.local_pizza, 'price': '₱180'},
-    {'name': 'Milk Tea', 'icon': Icons.local_cafe, 'price': '₱85'},
-    {'name': 'Bakery', 'icon': Icons.bakery_dining, 'price': '₱60'},
+    {'name': 'All', 'icon': Icons.restaurant_rounded, 'price': ''},
+    {'name': 'Burger', 'icon': Icons.lunch_dining_rounded, 'price': '₱50'},
+    {'name': 'Chicken', 'icon': Icons.kebab_dining_rounded, 'price': '₱120'},
+    {'name': 'Pizza', 'icon': Icons.local_pizza_rounded, 'price': '₱180'},
+    {'name': 'Milk Tea', 'icon': Icons.local_cafe_rounded, 'price': '₱85'},
+    {'name': 'Bakery', 'icon': Icons.bakery_dining_rounded, 'price': '₱60'},
   ];
 
   @override
   void initState() {
     super.initState();
     _loadStores();
+    _loadAddress();
+  }
+
+  Future<void> _loadAddress() async {
+    try {
+      final api = context.read<ApiClient>();
+      final addresses = await api.getAddresses();
+      if (mounted && addresses.isNotEmpty) {
+        setState(() {
+          _currentAddress = addresses.firstWhere((a) => a.isDefault, orElse: () => addresses.first);
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadStores() async {
@@ -79,12 +94,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         destinations: [
           const NavigationDestination(
             icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, color: AppColors.brandPrimary),
+            selectedIcon: Icon(Icons.home_rounded, color: AppColors.brandPrimary),
             label: 'Home',
           ),
           const NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long, color: AppColors.brandPrimary),
+            selectedIcon: Icon(Icons.receipt_long_rounded, color: AppColors.brandPrimary),
             label: 'My Orders',
           ),
           NavigationDestination(
@@ -96,13 +111,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             selectedIcon: Badge(
               isLabelVisible: cart.itemCount > 0,
               label: Text('${cart.itemCount}'),
-              child: const Icon(Icons.shopping_bag, color: AppColors.brandPrimary),
+              child: const Icon(Icons.shopping_bag_rounded, color: AppColors.brandPrimary),
             ),
             label: 'Cart',
           ),
           const NavigationDestination(
             icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: AppColors.brandPrimary),
+            selectedIcon: Icon(Icons.person_rounded, color: AppColors.brandPrimary),
             label: 'Profile',
           ),
         ],
@@ -123,61 +138,81 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     return RefreshIndicator(
       onRefresh: _loadStores,
       child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
         children: [
-          // Deliver To & Cart Header (Matches Page 56 of thesis)
+          // Deliver To Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'DELIVER TO',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.brandPrimary,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: const [
-                      Text(
-                        'Purok Miracle, Kabacan',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              Expanded(
+                child: InkWell(
+                  onTap: () async {
+                    final selected = await Navigator.of(context).push<Address>(
+                      MaterialPageRoute(builder: (_) => const SavedAddressesScreen(isSelecting: true)),
+                    );
+                    if (selected != null && mounted) {
+                      setState(() => _currentAddress = selected);
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'DELIVER TO',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.brandPrimary,
+                          letterSpacing: 1.2,
+                        ),
                       ),
-                      SizedBox(width: 4),
-                      Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.textPrimary),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              _currentAddress != null ? '${_currentAddress!.label} (${_currentAddress!.addressLine})' : 'Purok Miracle, Poblacion, Kabacan',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textPrimary),
+                        ],
+                      ),
                     ],
                   ),
-                ],
+                ),
               ),
+              const SizedBox(width: 12),
               InkWell(
                 onTap: () => setState(() => _currentTab = 2),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.brandSecondary,
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
+                    boxShadow: AppColors.premiumShadow,
                   ),
                   child: Badge(
                     isLabelVisible: cart.itemCount > 0,
                     label: Text('${cart.itemCount}'),
                     backgroundColor: AppColors.brandPrimary,
-                    child: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 20),
+                    child: const Icon(Icons.shopping_bag_outlined, color: AppColors.textPrimary, size: 20),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
 
           // Greeting
           Text(
-            'Hey $userName, Good Day!',
+            'Hey $userName, what are you craving today?',
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w900,
@@ -187,33 +222,42 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           ),
           const SizedBox(height: 14),
 
-          // Search Bar
-          TextField(
-            onChanged: (val) => setState(() => _searchQuery = val),
-            decoration: InputDecoration(
-              hintText: 'Search dishes, restaurants in Kabacan...',
-              prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () => setState(() => _searchQuery = ''),
-                    )
-                  : null,
+          // Search Bar with Light Elevation
+          Container(
+            decoration: BoxDecoration(
+              boxShadow: AppColors.premiumShadow,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: TextField(
+              onChanged: (val) => setState(() => _searchQuery = val),
+              decoration: InputDecoration(
+                hintText: 'Search restaurants, dishes, snacks...',
+                prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textSecondary),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        onPressed: () => setState(() => _searchQuery = ''),
+                      )
+                    : null,
+              ),
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 24),
 
           // Categories Header & Horizontal List
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
-              Text('All Categories', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
-              Text('See All >', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.brandPrimary)),
+              Expanded(
+                child: Text('Food Categories', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppColors.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+              SizedBox(width: 8),
+              Text('See All >', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.brandPrimary)),
             ],
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 94,
+            height: 96,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _quickCategories.length,
@@ -223,32 +267,32 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 final isSelected = _selectedCategory == cat['name'];
                 return InkWell(
                   onTap: () => setState(() => _selectedCategory = cat['name'] as String),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    width: 78,
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                    width: 80,
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
                     decoration: BoxDecoration(
                       color: isSelected ? AppColors.brandPrimary : Colors.white,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: isSelected ? AppColors.brandPrimary : AppColors.border,
                       ),
                       boxShadow: isSelected
                           ? [
                               BoxShadow(
-                                color: AppColors.brandPrimary.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
+                                color: AppColors.brandPrimary.withOpacity(0.35),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                               ),
                             ]
-                          : null,
+                          : AppColors.premiumShadow,
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
                           cat['icon'] as IconData,
-                          size: 26,
+                          size: 24,
                           color: isSelected ? Colors.white : AppColors.brandPrimary,
                         ),
                         const SizedBox(height: 6),
@@ -256,7 +300,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           cat['name'] as String,
                           style: TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w800,
                             color: isSelected ? Colors.white : AppColors.textPrimary,
                           ),
                           maxLines: 1,
@@ -269,7 +313,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             style: TextStyle(
                               fontSize: 9,
                               color: isSelected ? Colors.white70 : AppColors.textMuted,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
@@ -282,21 +326,24 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Open Restaurants Header
+          // Open Restaurants Section
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
-              Text('Open Restaurants in Kabacan', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
-              Text('See All >', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.brandPrimary)),
+              Expanded(
+                child: Text('Restaurants in Kabacan', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppColors.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+              SizedBox(width: 8),
+              Text('See All >', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.brandPrimary)),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
-          // Store Cards
+          // Restaurant Cards
           if (_isLoading)
             const Center(
               child: Padding(
-                padding: EdgeInsets.all(32),
+                padding: EdgeInsets.all(36),
                 child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppColors.brandPrimary)),
               ),
             )
@@ -310,14 +357,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             )
           else if (filteredStores.isEmpty)
             const EmptyStateView(
-              icon: Icons.storefront,
+              icon: Icons.storefront_rounded,
               title: 'No Restaurants Found',
               description: 'Try adjusting your search query.',
             )
           else
             ...filteredStores.map((store) {
               return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.only(bottom: 18),
                 child: Card(
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
@@ -329,15 +376,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Restaurant Cover Header
+                        // Cover Graphic
                         Container(
-                          height: 130,
+                          height: 135,
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                AppColors.brandSecondary,
-                                AppColors.brandPrimary.withOpacity(0.85),
-                              ],
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFF1F2), Color(0xFFFFE4E6)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -345,7 +389,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           child: Stack(
                             children: [
                               Center(
-                                child: Icon(Icons.restaurant, size: 48, color: Colors.white.withOpacity(0.3)),
+                                child: Icon(Icons.restaurant_rounded, size: 52, color: AppColors.brandPrimary.withOpacity(0.2)),
                               ),
                               Positioned(
                                 top: 12,
@@ -355,48 +399,84 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(20),
+                                    boxShadow: AppColors.premiumShadow,
                                   ),
                                   child: const Row(
                                     children: [
-                                      Icon(Icons.star, size: 14, color: AppColors.warning),
+                                      Icon(Icons.star_rounded, size: 15, color: Color(0xFFF59E0B)),
                                       SizedBox(width: 4),
-                                      Text('4.8', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                                      Text('4.8', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.textPrimary)),
                                     ],
                                   ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 12,
+                                left: 12,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.7),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text('20-30 min', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        // Restaurant Details
+
+                        // Store Info Content
                         Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                store.name,
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      store.name,
+                                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: AppColors.textPrimary),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textMuted),
+                                ],
                               ),
                               if (store.description != null) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   store.description!,
-                                  style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                               const SizedBox(height: 10),
                               Row(
-                                children: const [
-                                  Icon(Icons.delivery_dining, size: 16, color: AppColors.brandPrimary),
-                                  SizedBox(width: 4),
-                                  Text('₱49 Base Fee', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                                  SizedBox(width: 14),
-                                  Icon(Icons.schedule, size: 16, color: AppColors.textSecondary),
-                                  SizedBox(width: 4),
-                                  Text('15-25 min', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                children: [
+                                  const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textMuted),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      store.address,
+                                      style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.brandPrimaryLight,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text('₱49 Delivery', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.brandPrimary)),
+                                  ),
                                 ],
                               ),
                             ],

@@ -75,7 +75,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
               Text('Store: ${order.storeName ?? "M&S Store"}'),
               Text('Destination: ${order.deliveryAddress}'),
               const SizedBox(height: 16),
-              const Text('Select Available Courier:', style: TextStyle(fontWeight: FontWeight.w700)),
+              const Text('Select Available Rider:', style: TextStyle(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: selectedRiderId,
@@ -91,7 +91,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
             TextButton(onPressed: () => Navigator.of(modalCtx).pop(false), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () => Navigator.of(modalCtx).pop(true),
-              child: const Text('Confirm Assignment'),
+              child: const Text('Assign Rider'),
             ),
           ],
         ),
@@ -103,16 +103,16 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
         final api = context.read<ApiClient>();
         await api.assignOrder(order.id, selectedRiderId!);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Order assigned to rider successfully!')),
+          const SnackBar(content: Text('Rider assigned successfully!')),
         );
         _loadData();
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Assignment failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to assign rider: $e')));
       }
     }
   }
 
-  Future<void> _showCancelDialog(Order order) async {
+  Future<void> _showCancelOrderDialog(Order order) async {
     final reasonCtrl = TextEditingController();
 
     final confirmed = await showDialog<bool>(
@@ -121,12 +121,15 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
         title: Text('Cancel Order ${order.orderNumber}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Administrative cancellations require an audit reason for logging.', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            const Text('Reason for cancellation:', style: TextStyle(fontSize: 13)),
             const SizedBox(height: 12),
             TextField(
               controller: reasonCtrl,
-              decoration: const InputDecoration(labelText: 'Audit Reason (Required)'),
+              decoration: const InputDecoration(
+                hintText: 'e.g. Store out of stock, customer requested cancel',
+              ),
             ),
           ],
         ),
@@ -150,7 +153,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
         final api = context.read<ApiClient>();
         await api.cancelOrder(order.id, reasonCtrl.text.trim());
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Order cancelled and audit log recorded.')),
+          const SnackBar(content: Text('Order cancelled.')),
         );
         _loadData();
       } catch (e) {
@@ -162,97 +165,138 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppColors.primary)));
+      return const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppColors.brandPrimary)));
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Filter Row
-          Row(
+    return LayoutBuilder(
+      builder: (ctx, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+        final padding = isMobile ? 16.0 : 24.0;
+
+        return Padding(
+          padding: EdgeInsets.all(padding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Filter by Status: ', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(width: 12),
-              DropdownButton<OrderStatus?>(
-                value: _selectedStatusFilter,
-                hint: const Text('All Orders'),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('All Orders')),
-                  ...OrderStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.label))),
+              // Responsive Filter & Action Toolbar
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Status: ', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<OrderStatus?>(
+                            value: _selectedStatusFilter,
+                            hint: const Text('All Orders'),
+                            items: [
+                              const DropdownMenuItem(value: null, child: Text('All Orders')),
+                              ...OrderStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.label))),
+                            ],
+                            onChanged: (val) {
+                              setState(() => _selectedStatusFilter = val);
+                              _loadData();
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('Refresh'),
+                    onPressed: _loadData,
+                  ),
                 ],
-                onChanged: (val) {
-                  setState(() => _selectedStatusFilter = val);
-                  _loadData();
-                },
               ),
-              const Spacer(),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('Refresh'),
-                onPressed: _loadData,
+              const SizedBox(height: 16),
+
+              // Responsive Horizontal & Vertical Scrollable Orders Data Table
+              Expanded(
+                child: _orders.isEmpty
+                    ? const EmptyStateView(
+                        icon: Icons.inbox_outlined,
+                        title: 'No Orders Found',
+                        description: 'No orders currently match the selected status filter.',
+                      )
+                    : Card(
+                        clipBehavior: Clip.antiAlias,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.vertical,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(minWidth: constraints.maxWidth - (padding * 2)),
+                              child: DataTable(
+                                headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+                                horizontalMargin: 16,
+                                columnSpacing: 22,
+                                columns: const [
+                                  DataColumn(label: Text('Order #', style: TextStyle(fontWeight: FontWeight.w800))),
+                                  DataColumn(label: Text('Store', style: TextStyle(fontWeight: FontWeight.w800))),
+                                  DataColumn(label: Text('Customer', style: TextStyle(fontWeight: FontWeight.w800))),
+                                  DataColumn(label: Text('Delivery Address', style: TextStyle(fontWeight: FontWeight.w800))),
+                                  DataColumn(label: Text('Total', style: TextStyle(fontWeight: FontWeight.w800))),
+                                  DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w800))),
+                                  DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.w800))),
+                                ],
+                                rows: _orders.map((o) {
+                                  return DataRow(cells: [
+                                    DataCell(Text(o.orderNumber, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.brandPrimary))),
+                                    DataCell(Text(o.storeName ?? '—')),
+                                    DataCell(Text(o.customerName ?? '—')),
+                                    DataCell(SizedBox(width: 180, child: Text(o.deliveryAddress, overflow: TextOverflow.ellipsis))),
+                                    DataCell(Text(Formatters.currency(o.totalAmount), style: const TextStyle(fontWeight: FontWeight.w700))),
+                                    DataCell(StatusBadge(status: o.status, isSmall: true)),
+                                    DataCell(
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (o.status == OrderStatus.confirmed || o.status == OrderStatus.pending)
+                                            OutlinedButton.icon(
+                                              style: OutlinedButton.styleFrom(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                              ),
+                                              icon: const Icon(Icons.person_add_rounded, size: 14),
+                                              label: const Text('Assign'),
+                                              onPressed: () => _showAssignRiderDialog(o),
+                                            ),
+                                          if (o.status != OrderStatus.delivered && o.status != OrderStatus.cancelled) ...[
+                                            const SizedBox(width: 8),
+                                            IconButton(
+                                              icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 18),
+                                              tooltip: 'Cancel Order',
+                                              onPressed: () => _showCancelOrderDialog(o),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ]);
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-
-          // Orders Data Table / List
-          Expanded(
-            child: _orders.isEmpty
-                ? const EmptyStateView(
-                    icon: Icons.inbox_outlined,
-                    title: 'No Orders Found',
-                    description: 'No orders currently match the selected status filter.',
-                  )
-                : Card(
-                    child: SingleChildScrollView(
-                      child: DataTable(
-                        columnSpacing: 24,
-                        columns: const [
-                          DataColumn(label: Text('Order #', style: TextStyle(fontWeight: FontWeight.w700))),
-                          DataColumn(label: Text('Store', style: TextStyle(fontWeight: FontWeight.w700))),
-                          DataColumn(label: Text('Customer', style: TextStyle(fontWeight: FontWeight.w700))),
-                          DataColumn(label: Text('Total (COD)', style: TextStyle(fontWeight: FontWeight.w700))),
-                          DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w700))),
-                          DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.w700))),
-                        ],
-                        rows: _orders.map((o) {
-                          return DataRow(
-                            cells: [
-                              DataCell(Text(o.orderNumber, style: const TextStyle(fontWeight: FontWeight.w700))),
-                              DataCell(Text(o.storeName ?? 'M&S Store')),
-                              DataCell(Text(o.customerName ?? 'Customer')),
-                              DataCell(Text(Formatters.currency(o.totalAmount), style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary))),
-                              DataCell(StatusBadge(status: o.status)),
-                              DataCell(
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (o.status == OrderStatus.pending || o.status == OrderStatus.confirmed)
-                                      TextButton.icon(
-                                        icon: const Icon(Icons.person_add, size: 16),
-                                        label: const Text('Assign Rider'),
-                                        onPressed: () => _showAssignRiderDialog(o),
-                                      ),
-                                    if (o.status != OrderStatus.delivered && o.status != OrderStatus.cancelled)
-                                      IconButton(
-                                        icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 18),
-                                        tooltip: 'Cancel Order',
-                                        onPressed: () => _showCancelDialog(o),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

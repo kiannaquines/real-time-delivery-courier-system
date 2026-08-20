@@ -70,7 +70,7 @@ def list_orders(
                 subtotal=float(o.subtotal),
                 delivery_fee=float(o.delivery_fee),
                 total_amount=float(o.total_amount),
-                payment_status=o.payment.status if o.payment else "unpaid",
+                payment_status="paid" if (o.payment and o.payment.status == "paid") else "unpaid",
                 delivery_address=o.delivery_address,
                 delivery_latitude=float(o.delivery_latitude),
                 delivery_longitude=float(o.delivery_longitude),
@@ -160,7 +160,7 @@ def get_order_detail(
         subtotal=float(order.subtotal),
         delivery_fee=float(order.delivery_fee),
         total_amount=float(order.total_amount),
-        payment_status=order.payment.status if order.payment else "unpaid",
+        payment_status="paid" if (order.payment and order.payment.status == "paid") else "unpaid",
         delivery_address=order.delivery_address,
         delivery_latitude=float(order.delivery_latitude),
         delivery_longitude=float(order.delivery_longitude),
@@ -186,7 +186,7 @@ def get_order_detail(
             id=order.payment.id,
             method=order.payment.method,
             amount=float(order.payment.amount),
-            status=order.payment.status,
+            status="paid" if order.payment.status == "paid" else "unpaid",
             collected_at=order.payment.collected_at,
         )
 

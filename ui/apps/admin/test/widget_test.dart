@@ -19,7 +19,7 @@ void main() {
       ),
     );
 
-    expect(find.text('M&S Command Center'), findsOneWidget);
-    expect(find.text('Authenticate Console'), findsOneWidget);
+    expect(find.text('Admin Portal'), findsOneWidget);
+    expect(find.text('LOG IN'), findsOneWidget);
   });
 }

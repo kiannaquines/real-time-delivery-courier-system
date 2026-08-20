@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     DATABASE_URL: str = f"sqlite:///{os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'mns_delivery.db'))}"
     DIRECT_DATABASE_URL: str = f"sqlite:///{os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'mns_delivery.db'))}"
     
+    # Mapbox
+    MAPBOX_ACCESS_TOKEN: str = "pk.eyJ1IjoiamVhcmFyZCIsImEiOiJjbWE2ZjNlM2YwM2wyMmlvYW9mdDQ5OHJ5In0.57WdNE6fCl-qVJAoMZe40Q"
+    MAPBOX_API_BASE: str = "https://api.mapbox.com"
+    
     # Supabase
     SUPABASE_URL: str = "https://example.supabase.co"
     SUPABASE_PUBLISHABLE_KEY: str = "dummy-anon-key"

@@ -13,10 +13,16 @@ class RiderLoginScreen extends StatefulWidget {
 class _RiderLoginScreenState extends State<RiderLoginScreen> {
   final _emailCtrl = TextEditingController(text: 'rider@mns.com');
   final _passwordCtrl = TextEditingController(text: 'RiderPass123!');
+  bool _obscurePassword = true;
   bool _isLoading = false;
   String? _error;
 
   Future<void> _handleLogin() async {
+    if (_emailCtrl.text.trim().isEmpty || _passwordCtrl.text.trim().isEmpty) {
+      setState(() => _error = 'Please enter your rider credentials.');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -26,131 +32,223 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
       final auth = context.read<AuthSessionManager>();
       await auth.login(_emailCtrl.text.trim(), _passwordCtrl.text.trim());
     } catch (e) {
-      setState(() => _error = e.toString().replaceAll('ApiException: ', ''));
+      if (mounted) {
+        setState(() => _error = e.toString().replaceAll('ApiException: ', ''));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  void _fillDemoAccount() {
+    setState(() {
+      _emailCtrl.text = 'rider@mns.com';
+      _passwordCtrl.text = 'RiderPass123!';
+      _error = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
-      backgroundColor: AppColors.brandSecondary,
-      body: Stack(
-        children: [
-          // Header Area
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: size.height * 0.38,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: AppColors.darkCardGradient,
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.brandPrimary.withOpacity(0.2),
-                          shape: BoxShape.circle,
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Rider Fleet Header Hero
+                  Center(
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            gradient: AppColors.primaryGradient,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.brandPrimary.withOpacity(0.35),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.two_wheeler_rounded, size: 42, color: Colors.white),
                         ),
-                        child: const Icon(Icons.two_wheeler, size: 40, color: AppColors.brandPrimary),
-                      ),
-                      const SizedBox(height: 14),
-                      const Text(
-                        'Rider Portal',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: -0.5,
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.brandPrimaryLight,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.brandPrimary.withOpacity(0.2)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.shield_rounded, size: 12, color: AppColors.brandPrimary),
+                              SizedBox(width: 4),
+                              Text(
+                                'RIDER APP',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.brandPrimary,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'M&S Delivery Express Kabacan Courier Fleet',
-                        style: TextStyle(fontSize: 13, color: Colors.white70),
-                      ),
-                    ],
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Rider Login',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -0.8,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'M&S Delivery - Rider App',
+                          style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ),
-            ),
-          ),
+                  const SizedBox(height: 28),
 
-          // Main Card
-          Positioned(
-            top: size.height * 0.34,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 20,
-                    offset: Offset(0, -4),
+                  if (_error != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEE2E2),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _error!,
+                              style: const TextStyle(color: AppColors.error, fontSize: 13, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Form Card
+                  Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(22),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Rider Email field
+                          AppTextField(
+                            controller: _emailCtrl,
+                            label: 'EMAIL',
+                            hintText: 'rider@mns.com',
+                            keyboardType: TextInputType.emailAddress,
+                            prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.brandPrimary, size: 20),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Password field
+                          AppTextField(
+                            controller: _passwordCtrl,
+                            label: 'PASSWORD',
+                            hintText: '••••••••••••',
+                            obscureText: _obscurePassword,
+                            prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.brandPrimary, size: 20),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                color: AppColors.textSecondary,
+                                size: 20,
+                              ),
+                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Demo Autofill Pill
+                          InkWell(
+                            onTap: _fillDemoAccount,
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Wrap(
+                                alignment: WrapAlignment.center,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 6,
+                                children: [
+                                  Icon(Icons.bolt_rounded, size: 16, color: AppColors.brandPrimary),
+                                  Text(
+                                    'Fill Demo: rider@mns.com',
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Start Shift Button
+                          AppButton(
+                            text: 'LOG IN',
+                            isLoading: _isLoading,
+                            onPressed: _handleLogin,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Safety & Dispatch Notice
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandAccentLight,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.brandAccent.withOpacity(0.2)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.security_rounded, size: 20, color: AppColors.brandAccent),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Please wear your helmet and keep your location turned on while on duty.',
+                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (_error != null) ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.statusCancelledBg,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.statusCancelledFg.withOpacity(0.3)),
-                          ),
-                          child: Text(_error!, style: const TextStyle(color: AppColors.statusCancelledFg, fontSize: 13)),
-                        ),
-                        const SizedBox(height: 18),
-                      ],
-                      AppTextField(
-                        controller: _emailCtrl,
-                        label: 'RIDER EMAIL',
-                        hintText: 'rider@mns.com',
-                        keyboardType: TextInputType.emailAddress,
-                        prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 18),
-                      AppTextField(
-                        controller: _passwordCtrl,
-                        label: 'PASSWORD',
-                        hintText: '••••••••••••',
-                        obscureText: true,
-                        prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 28),
-                      AppButton(
-                        text: 'START COURIER SHIFT',
-                        isLoading: _isLoading,
-                        onPressed: _handleLogin,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

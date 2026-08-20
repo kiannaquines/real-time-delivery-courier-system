@@ -48,11 +48,27 @@ class _RiderAppState extends State<RiderApp> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthSessionManager>();
 
+    Widget homeWidget;
+    if (auth.status == AuthStatus.authenticating && !auth.isAuthenticated) {
+      homeWidget = const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.brandPrimary),
+          ),
+        ),
+      );
+    } else if (auth.isAuthenticated) {
+      homeWidget = const RiderDashboardScreen();
+    } else {
+      homeWidget = const RiderLoginScreen();
+    }
+
     return MaterialApp(
       title: 'M&S Rider Fleet',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: auth.isAuthenticated ? const RiderDashboardScreen() : const RiderLoginScreen(),
+      home: homeWidget,
     );
   }
 }

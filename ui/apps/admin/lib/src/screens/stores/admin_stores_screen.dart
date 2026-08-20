@@ -66,7 +66,7 @@ class _AdminStoresScreenState extends State<AdminStoresScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add New M&S Store Location'),
+        title: const Text('Add New Store'),
         content: SizedBox(
           width: 400,
           child: Column(
@@ -88,7 +88,7 @@ class _AdminStoresScreenState extends State<AdminStoresScreen> {
                 Navigator.of(ctx).pop(true);
               }
             },
-            child: const Text('Create Store'),
+            child: const Text('Add Store'),
           ),
         ],
       ),
@@ -99,10 +99,10 @@ class _AdminStoresScreenState extends State<AdminStoresScreen> {
         final api = context.read<ApiClient>();
         await api.createStore(
           name: nameCtrl.text.trim(),
-          description: descCtrl.text.trim().isNotEmpty ? descCtrl.text.trim() : null,
           address: addressCtrl.text.trim(),
-          latitude: 14.5515,
-          longitude: 121.0505,
+          latitude: 7.1280,
+          longitude: 124.8310,
+          description: descCtrl.text.trim().isNotEmpty ? descCtrl.text.trim() : null,
         );
         _loadStores();
       } catch (e) {
@@ -111,10 +111,7 @@ class _AdminStoresScreenState extends State<AdminStoresScreen> {
     }
   }
 
-  Future<void> _showCreateMenuItemDialog() async {
-    if (_selectedStoreDetail == null) return;
-    final store = _selectedStoreDetail!.store;
-
+  Future<void> _showAddMenuItemDialog(Store store) async {
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
@@ -122,7 +119,7 @@ class _AdminStoresScreenState extends State<AdminStoresScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Add Menu Item to ${store.name}'),
+        title: Text('Add Menu Item - ${store.name}'),
         content: SizedBox(
           width: 400,
           child: Column(
@@ -169,134 +166,166 @@ class _AdminStoresScreenState extends State<AdminStoresScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppColors.primary)));
+      return const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppColors.brandPrimary)));
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Stores Master List
-          SizedBox(
-            width: 320,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Stores', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.add, size: 16),
-                      label: const Text('New Store'),
-                      onPressed: _showCreateStoreDialog,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: Card(
-                    child: ListView.separated(
-                      itemCount: _stores.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
-                      itemBuilder: (ctx, idx) {
-                        final store = _stores[idx];
-                        final isSelected = _selectedStoreDetail?.store.id == store.id;
-                        return ListTile(
-                          selected: isSelected,
-                          selectedTileColor: AppColors.primary.withOpacity(0.08),
-                          title: Text(store.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                          subtitle: Text(store.address, maxLines: 1, overflow: TextOverflow.ellipsis),
-                          trailing: const Icon(Icons.chevron_right, size: 18),
-                          onTap: () => _loadStoreDetail(store.id),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 24),
+    return LayoutBuilder(
+      builder: (ctx, constraints) {
+        final isNarrow = constraints.maxWidth < 950;
+        final isMobile = constraints.maxWidth < 600;
+        final padding = isMobile ? 16.0 : 24.0;
 
-          // Menu Items Detail View
-          Expanded(
-            child: _selectedStoreDetail == null
-                ? const EmptyStateView(
-                    icon: Icons.storefront,
-                    title: 'Select a Store',
-                    description: 'Select a store on the left to view and manage its menu items.',
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        final storeListWidget = Card(
+          child: ListView.separated(
+            shrinkWrap: isNarrow,
+            physics: isNarrow ? const NeverScrollableScrollPhysics() : null,
+            itemCount: _stores.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (ctx, idx) {
+              final s = _stores[idx];
+              final isSelected = _selectedStoreDetail?.store.id == s.id;
+              return ListTile(
+                selected: isSelected,
+                selectedTileColor: AppColors.brandPrimaryLight,
+                leading: CircleAvatar(
+                  backgroundColor: isSelected ? AppColors.brandPrimary : AppColors.brandPrimaryLight,
+                  child: Icon(Icons.storefront, color: isSelected ? Colors.white : AppColors.brandPrimary),
+                ),
+                title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text(s.address, maxLines: 1, overflow: TextOverflow.ellipsis),
+                onTap: () => _loadStoreDetail(s.id),
+              );
+            },
+          ),
+        );
+
+        final detailWidget = _selectedStoreDetail == null
+            ? const Center(child: Text('Select a store to view items'))
+            : Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 12,
+                        runSpacing: 12,
                         children: [
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(_selectedStoreDetail!.store.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                              Text(_selectedStoreDetail!.store.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                               Text(_selectedStoreDetail!.store.address, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                             ],
                           ),
                           ElevatedButton.icon(
                             icon: const Icon(Icons.add, size: 16),
                             label: const Text('Add Menu Item'),
-                            onPressed: _showCreateMenuItemDialog,
+                            onPressed: () => _showAddMenuItemDialog(_selectedStoreDetail!.store),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: Card(
-                          child: _selectedStoreDetail!.items.isEmpty
-                              ? const EmptyStateView(
-                                  icon: Icons.restaurant_menu,
-                                  title: 'No Menu Items',
-                                  description: 'Add dishes and ready meals to this store\'s menu.',
-                                )
-                              : ListView.separated(
-                                  padding: const EdgeInsets.all(16),
-                                  itemCount: _selectedStoreDetail!.items.length,
-                                  separatorBuilder: (_, __) => const Divider(height: 20, color: AppColors.border),
-                                  itemBuilder: (ctx, idx) {
-                                    final item = _selectedStoreDetail!.items[idx];
-                                    return Row(
-                                      children: [
-                                        Container(
-                                          width: 50,
-                                          height: 50,
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primary.withOpacity(0.08),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: const Icon(Icons.fastfood, color: AppColors.primary),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(item.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                                              if (item.description != null)
-                                                Text(item.description!, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12), maxLines: 1),
-                                            ],
-                                          ),
-                                        ),
-                                        Text(Formatters.currency(item.price), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.primary)),
-                                      ],
-                                    );
-                                  },
+                      const Divider(height: 24),
+                      Text('Menu Items (${_selectedStoreDetail!.items.length})', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                      const SizedBox(height: 12),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minWidth: isNarrow ? constraints.maxWidth - (padding * 2) : constraints.maxWidth - 380),
+                          child: DataTable(
+                            headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+                            columns: const [
+                              DataColumn(label: Text('Item Name', style: TextStyle(fontWeight: FontWeight.w800))),
+                              DataColumn(label: Text('Description', style: TextStyle(fontWeight: FontWeight.w800))),
+                              DataColumn(label: Text('Price', style: TextStyle(fontWeight: FontWeight.w800))),
+                              DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w800))),
+                            ],
+                            rows: _selectedStoreDetail!.items.map((item) {
+                              return DataRow(cells: [
+                                DataCell(Text(item.name, style: const TextStyle(fontWeight: FontWeight.w700))),
+                                DataCell(SizedBox(width: 200, child: Text(item.description ?? '—', overflow: TextOverflow.ellipsis))),
+                                DataCell(Text(Formatters.currency(item.price), style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.brandPrimary))),
+                                DataCell(
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: item.isAvailable ? AppColors.brandAccentLight : const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      item.isAvailable ? 'Available' : 'Sold Out',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: item.isAvailable ? AppColors.brandAccent : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ),
                                 ),
+                              ]);
+                            }).toList(),
+                          ),
                         ),
                       ),
                     ],
                   ),
-          ),
-        ],
-      ),
+                ),
+              );
+
+        return Padding(
+          padding: EdgeInsets.all(padding),
+          child: isNarrow
+              ? ListView(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Stores', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('New Store'),
+                          onPressed: _showCreateStoreDialog,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    storeListWidget,
+                    const SizedBox(height: 20),
+                    detailWidget,
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 320,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Stores', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.add, size: 16),
+                                label: const Text('New Store'),
+                                onPressed: _showCreateStoreDialog,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Expanded(child: storeListWidget),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(child: detailWidget),
+                  ],
+                ),
+        );
+      },
     );
   }
 }

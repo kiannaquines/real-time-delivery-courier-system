@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:auth_session/auth_session.dart';
 import 'package:design_system/design_system.dart';
+import 'saved_addresses_screen.dart';
 
 class CustomerProfileScreen extends StatelessWidget {
   const CustomerProfileScreen({super.key});
@@ -51,10 +52,15 @@ class CustomerProfileScreen extends StatelessWidget {
           child: Column(
             children: [
               ListTile(
-                leading: const Icon(Icons.location_on_outlined, color: AppColors.primary),
-                title: const Text('Saved Addresses'),
+                leading: const Icon(Icons.location_on_outlined, color: AppColors.brandPrimary),
+                title: const Text('Saved Addresses', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('Manage home, dorm, and office locations', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
+                onTap: () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const SavedAddressesScreen(),
+                  ));
+                },
               ),
               const Divider(height: 1, color: AppColors.border),
               ListTile(

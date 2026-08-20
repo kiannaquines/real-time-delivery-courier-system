@@ -35,87 +35,119 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
-            child: Card(
-              color: const Color(0xFF1E293B),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: Color(0xFF334155)),
+      backgroundColor: const Color(0xFFF1F5F9),
+      body: Stack(
+        children: [
+          // Background ambient soft warm glow
+          Positioned(
+            top: -100,
+            right: -100,
+            child: Container(
+              width: 350,
+              height: 350,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.brandPrimary.withOpacity(0.08),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(36),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.2),
-                          shape: BoxShape.circle,
+            ),
+          ),
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Card(
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: AppColors.premiumShadow,
+                    ),
+                    padding: const EdgeInsets.all(40),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              gradient: AppColors.primaryGradient,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.brandPrimary.withOpacity(0.35),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(Icons.admin_panel_settings_rounded, size: 36, color: Colors.white),
+                          ),
                         ),
-                        child: const Icon(Icons.admin_panel_settings, size: 40, color: AppColors.accent),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'M&S Command Center',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Administrator Access & Operations Console',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: Colors.white60),
-                    ),
-                    const SizedBox(height: 28),
-                    if (_error != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.errorBg,
-                          borderRadius: BorderRadius.circular(8),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Admin Portal',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                        child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    AppTextField(
-                      controller: _emailCtrl,
-                      label: 'Admin Email',
-                      keyboardType: TextInputType.emailAddress,
-                      prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textSecondary),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'M&S Delivery Express - Kabacan',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 30),
+                        if (_error != null) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.statusCancelledBg,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.statusCancelledFg.withOpacity(0.3)),
+                            ),
+                            child: Text(_error!, style: const TextStyle(color: AppColors.statusCancelledFg, fontSize: 13)),
+                          ),
+                          const SizedBox(height: 18),
+                        ],
+                        AppTextField(
+                          controller: _emailCtrl,
+                          label: 'EMAIL',
+                          hintText: 'admin@mns.com',
+                          keyboardType: TextInputType.emailAddress,
+                          prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textSecondary),
+                        ),
+                        const SizedBox(height: 18),
+                        AppTextField(
+                          controller: _passwordCtrl,
+                          label: 'PASSWORD',
+                          hintText: '••••••••••••',
+                          obscureText: true,
+                          prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
+                        ),
+                        const SizedBox(height: 28),
+                        AppButton(
+                          text: 'LOG IN',
+                          isLoading: _isLoading,
+                          onPressed: _handleLogin,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 18),
-                    AppTextField(
-                      controller: _passwordCtrl,
-                      label: 'Password',
-                      obscureText: true,
-                      prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
-                    ),
-                    const SizedBox(height: 28),
-                    AppButton(
-                      text: 'Authenticate Console',
-                      isLoading: _isLoading,
-                      onPressed: _handleLogin,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

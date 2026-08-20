@@ -20,23 +20,51 @@ class AdminDashboardShell extends StatefulWidget {
 class _AdminDashboardShellState extends State<AdminDashboardShell> {
   int _selectedIndex = 0;
 
-  final _navItems = const [
-    {'title': 'Operations Overview', 'icon': Icons.dashboard_outlined, 'selectedIcon': Icons.dashboard},
-    {'title': 'Dispatch & Orders', 'icon': Icons.assignment_outlined, 'selectedIcon': Icons.assignment},
-    {'title': 'Stores & Inventory', 'icon': Icons.storefront_outlined, 'selectedIcon': Icons.storefront},
-    {'title': 'Rider Fleet', 'icon': Icons.two_wheeler_outlined, 'selectedIcon': Icons.two_wheeler},
-    {'title': 'Live Fleet Map', 'icon': Icons.map_outlined, 'selectedIcon': Icons.map},
-    {'title': 'Reports & Analytics', 'icon': Icons.analytics_outlined, 'selectedIcon': Icons.analytics},
-    {'title': 'Audit & Compliance', 'icon': Icons.security_outlined, 'selectedIcon': Icons.security},
+  final List<Map<String, dynamic>> _navItems = const [
+    {
+      'title': 'Overview',
+      'icon': Icons.dashboard_outlined,
+      'selectedIcon': Icons.dashboard_rounded,
+    },
+    {
+      'title': 'Orders',
+      'icon': Icons.receipt_long_outlined,
+      'selectedIcon': Icons.receipt_long_rounded,
+    },
+    {
+      'title': 'Stores',
+      'icon': Icons.storefront_outlined,
+      'selectedIcon': Icons.storefront_rounded,
+    },
+    {
+      'title': 'Riders',
+      'icon': Icons.two_wheeler_outlined,
+      'selectedIcon': Icons.two_wheeler_rounded,
+    },
+    {
+      'title': 'Live Map',
+      'icon': Icons.map_outlined,
+      'selectedIcon': Icons.map_rounded,
+    },
+    {
+      'title': 'Reports',
+      'icon': Icons.bar_chart_outlined,
+      'selectedIcon': Icons.bar_chart_rounded,
+    },
+    {
+      'title': 'Activity Logs',
+      'icon': Icons.security_outlined,
+      'selectedIcon': Icons.security_rounded,
+    },
   ];
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthSessionManager>();
-    final isDesktop = MediaQuery.of(context).size.width >= 960;
+    final user = auth.currentUser;
 
     final pages = [
-      AdminOverviewDashboard(onNavigateTab: (idx) => setState(() => _selectedIndex = idx)),
+      AdminOverviewDashboard(onNavigateTab: (index) => setState(() => _selectedIndex = index)),
       const AdminOrdersScreen(),
       const AdminStoresScreen(),
       const AdminRidersScreen(),
@@ -47,155 +75,280 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Row(
-        children: [
-          // Sidebar
-          NavigationRail(
-            extended: isDesktop,
-            minExtendedWidth: 230,
-            backgroundColor: AppColors.brandSecondary,
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 12),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.brandPrimary.withOpacity(0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.delivery_dining, color: Colors.white, size: 22),
-                  ),
-                  if (isDesktop) ...[
-                    const SizedBox(width: 12),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'M&S Kabacan',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: -0.3),
-                        ),
-                        Text(
-                          'Command Console',
-                          style: TextStyle(color: Colors.white60, fontWeight: FontWeight.w500, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            trailing: Expanded(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: IconButton(
-                    icon: const Icon(Icons.logout, color: AppColors.error),
-                    tooltip: 'Sign Out Console',
-                    onPressed: () => auth.logout(),
-                  ),
-                ),
-              ),
-            ),
-            destinations: _navItems.map((item) {
-              return NavigationRailDestination(
-                icon: Icon(item['icon'] as IconData, color: Colors.white60),
-                selectedIcon: Icon(item['selectedIcon'] as IconData, color: AppColors.brandPrimary),
-                label: Text(
-                  item['title'] as String,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
-                ),
-              );
-            }).toList(),
-          ),
+      body: LayoutBuilder(
+        builder: (ctx, constraints) {
+          final isCompactScreen = constraints.maxWidth < 800;
+          final isMobileScreen = constraints.maxWidth < 600;
 
-          // Main Content View
-          Expanded(
-            child: Column(
-              children: [
-                // Top Header Bar
-                Container(
-                  height: 64,
-                  padding: const EdgeInsets.symmetric(horizontal: 28),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(bottom: BorderSide(color: AppColors.border)),
-                  ),
+          return Row(
+            children: [
+              // Responsive Navigation Rail (Icons-only on compact/tablet, Extended on desktop)
+              NavigationRail(
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
+                extended: constraints.maxWidth >= 1200,
+                minExtendedWidth: 240,
+                minWidth: 68,
+                backgroundColor: Colors.white,
+                indicatorColor: AppColors.brandPrimaryLight,
+                leading: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            _navItems[_selectedIndex]['title'] as String,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.textPrimary, letterSpacing: -0.3),
-                          ),
-                          const SizedBox(width: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.brandAccentLight,
-                              borderRadius: BorderRadius.circular(12),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: AppColors.primaryGradient,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.brandPrimary.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.circle, size: 8, color: AppColors.brandAccent),
-                                SizedBox(width: 6),
-                                Text('Live Engine Connected', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.brandAccent)),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
+                        child: const Icon(Icons.two_wheeler_rounded, color: Colors.white, size: 22),
                       ),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.notifications_none_outlined, color: AppColors.textSecondary),
-                            onPressed: () {},
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.background,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.border),
+                      if (constraints.maxWidth >= 1200) ...[
+                        const SizedBox(width: 14),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'M&S Express',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
+                                letterSpacing: -0.5,
+                              ),
                             ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 14,
-                                  backgroundColor: AppColors.brandPrimary.withOpacity(0.15),
-                                  child: const Text('A', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.brandPrimary, fontSize: 12)),
-                                ),
-                                const SizedBox(width: 8),
-                                const Text('Head Admin', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                              ],
+                            Text(
+                              'Admin Portal',
+                              style: TextStyle(
+                                color: AppColors.brandPrimary,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 11,
+                                letterSpacing: 0.2,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
+                destinations: _navItems.map((item) {
+                  return NavigationRailDestination(
+                    icon: Icon(item['icon'] as IconData, color: AppColors.textSecondary, size: 22),
+                    selectedIcon: Icon(item['selectedIcon'] as IconData, color: AppColors.brandPrimary, size: 22),
+                    label: Text(
+                      item['title'] as String,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const VerticalDivider(thickness: 1, width: 1, color: AppColors.border),
 
-                // Selected Tab Body
-                Expanded(child: pages[_selectedIndex]),
-              ],
-            ),
-          ),
-        ],
+              // Main Content Area with Adaptive Top Header
+              Expanded(
+                child: Column(
+                  children: [
+                    // Adaptive Top Header Bar
+                    Container(
+                      height: 68,
+                      padding: EdgeInsets.symmetric(horizontal: isMobileScreen ? 14 : 24),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        border: Border(bottom: BorderSide(color: AppColors.border)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Page Title & Status Pill (Truncated if space is tight)
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    _navItems[_selectedIndex]['title'] as String,
+                                    style: TextStyle(
+                                      fontSize: isMobileScreen ? 16 : 19,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppColors.textPrimary,
+                                      letterSpacing: -0.5,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (!isMobileScreen) ...[
+                                  const SizedBox(width: 12),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.brandPrimaryLight,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: AppColors.brandPrimary.withOpacity(0.25)),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.circle, size: 7, color: AppColors.brandPrimary),
+                                        SizedBox(width: 6),
+                                        Text(
+                                          'System Active',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppColors.brandPrimary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Right Controls & User Profile Pill
+                          Row(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.refresh_rounded, size: 18, color: AppColors.textSecondary),
+                                  tooltip: 'Refresh',
+                                  onPressed: () => setState(() {}),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+
+                              // User Profile Dropdown Button
+                              PopupMenuButton<String>(
+                                position: PopupMenuPosition.under,
+                                offset: const Offset(0, 8),
+                                elevation: 8,
+                                shadowColor: Colors.black.withOpacity(0.15),
+                                surfaceTintColor: Colors.white,
+                                color: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  side: const BorderSide(color: AppColors.border),
+                                ),
+                                onSelected: (val) {
+                                  if (val == 'logout') auth.logout();
+                                },
+                                itemBuilder: (ctx) => [
+                                  PopupMenuItem<String>(
+                                    enabled: false,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          user?.fullName ?? 'Administrator',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 14,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                        Text(
+                                          user?.email ?? 'admin@mns.com',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textMuted,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuDivider(),
+                                  const PopupMenuItem<String>(
+                                    value: 'logout',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.logout_rounded, color: AppColors.error, size: 18),
+                                        SizedBox(width: 10),
+                                        Text(
+                                          'Log Out',
+                                          style: TextStyle(
+                                            color: AppColors.error,
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(horizontal: isMobileScreen ? 6 : 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: AppColors.border),
+                                    boxShadow: AppColors.premiumShadow,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 14,
+                                        backgroundColor: AppColors.brandPrimaryLight,
+                                        child: Text(
+                                          user != null && user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : 'A',
+                                          style: const TextStyle(
+                                            color: AppColors.brandPrimary,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                      if (!isMobileScreen) ...[
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          user?.fullName ?? 'Admin',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 13,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondary, size: 18),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Active View
+                    Expanded(child: pages[_selectedIndex]),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

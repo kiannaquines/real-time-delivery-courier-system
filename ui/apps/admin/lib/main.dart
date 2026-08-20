@@ -45,11 +45,27 @@ class _AdminWebAppState extends State<AdminWebApp> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthSessionManager>();
 
+    Widget homeWidget;
+    if (auth.status == AuthStatus.authenticating && !auth.isAuthenticated) {
+      homeWidget = const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.brandPrimary),
+          ),
+        ),
+      );
+    } else if (auth.isAuthenticated) {
+      homeWidget = const AdminDashboardShell();
+    } else {
+      homeWidget = const AdminLoginScreen();
+    }
+
     return MaterialApp(
       title: 'M&S Delivery Operations Console',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: auth.isAuthenticated ? const AdminDashboardShell() : const AdminLoginScreen(),
+      home: homeWidget,
     );
   }
 }

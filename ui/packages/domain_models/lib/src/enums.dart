@@ -98,7 +98,7 @@ enum RiderStatus {
       case RiderStatus.available:
         return 'Available';
       case RiderStatus.busy:
-        return 'Busy / In Delivery';
+        return 'Busy';
       case RiderStatus.offline:
         return 'Offline';
     }

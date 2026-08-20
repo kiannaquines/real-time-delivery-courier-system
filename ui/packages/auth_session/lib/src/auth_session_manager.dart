@@ -28,7 +28,7 @@ class AuthSessionManager extends ChangeNotifier {
   AuthSessionManager({
     required this.apiClient,
     SessionStorage? storage,
-  }) : storage = storage ?? InMemorySessionStorage();
+  }) : storage = storage ?? DefaultSessionStorage();
 
   Future<void> initialize() async {
     _status = AuthStatus.authenticating;

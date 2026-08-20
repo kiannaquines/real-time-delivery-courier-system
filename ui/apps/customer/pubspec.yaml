@@ -21,6 +21,8 @@ dependencies:
   realtime_client:
     path: ../../packages/realtime_client
   provider: ^6.1.2
+  flutter_map: ^8.3.1
+  latlong2: ^0.10.1
 
 dev_dependencies:
   flutter_test:

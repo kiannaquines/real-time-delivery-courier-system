@@ -230,6 +230,26 @@ class ApiClient {
     return Address.fromJson(_handleResponse(resp) as Map<String, dynamic>);
   }
 
+  Future<Address> setDefaultAddress(String addressId) async {
+    final headers = await _headers();
+    final resp = await _client.put(
+      Uri.parse('$_normalizedBaseUrl/api/v1/customers/addresses/$addressId/default'),
+      headers: headers,
+    );
+    return Address.fromJson(_handleResponse(resp) as Map<String, dynamic>);
+  }
+
+  Future<void> deleteAddress(String addressId) async {
+    final headers = await _headers();
+    final resp = await _client.delete(
+      Uri.parse('$_normalizedBaseUrl/api/v1/customers/addresses/$addressId'),
+      headers: headers,
+    );
+    if (resp.statusCode != 204 && resp.statusCode != 200) {
+      _handleResponse(resp);
+    }
+  }
+
   // --- Order Endpoints ---
   Future<Map<String, dynamic>> previewFee({
     required String storeId,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:api_client/api_client.dart';
@@ -5,6 +6,8 @@ import 'package:domain_models/domain_models.dart';
 import 'package:design_system/design_system.dart';
 import 'package:auth_session/auth_session.dart';
 import '../delivery/active_delivery_screen.dart';
+import '../history/rider_history_screen.dart';
+import '../profile/rider_profile_screen.dart';
 import '../../state/location_engine.dart';
 
 class RiderDashboardScreen extends StatefulWidget {
@@ -15,23 +18,34 @@ class RiderDashboardScreen extends StatefulWidget {
 }
 
 class _RiderDashboardScreenState extends State<RiderDashboardScreen> {
+  int _currentTab = 0;
   RiderStatus _status = RiderStatus.available;
   OrderDetail? _activeDelivery;
   List<Order> _pastDeliveries = [];
   bool _isLoading = true;
   String? _error;
+  Timer? _heartbeatTimer;
 
   @override
   void initState() {
     super.initState();
-    _refreshData();
+    _refreshData(isInitial: true);
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 5), (_) => _refreshData(isInitial: false));
   }
 
-  Future<void> _refreshData() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    _heartbeatTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshData({bool isInitial = false}) async {
+    if (isInitial) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     try {
       final api = context.read<ApiClient>();
@@ -48,13 +62,19 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen> {
             if (active.delivery != null) {
               context.read<LocationEngine>().startTracking(active.delivery!.id);
             }
+          } else if (_status == RiderStatus.busy) {
+            _status = RiderStatus.available;
           }
+          _isLoading = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && isInitial) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -71,6 +91,40 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screens = [
+      _buildShiftView(),
+      const RiderHistoryScreen(),
+      const RiderProfileScreen(),
+    ];
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: screens[_currentTab],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentTab,
+        onDestinationSelected: (idx) => setState(() => _currentTab = idx),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.two_wheeler_outlined),
+            selectedIcon: Icon(Icons.two_wheeler_rounded, color: AppColors.brandPrimary),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history_rounded),
+            selectedIcon: Icon(Icons.history_rounded, color: AppColors.brandPrimary),
+            label: 'History',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person_rounded, color: AppColors.brandPrimary),
+            label: 'Profile',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShiftView() {
     final locationEngine = context.watch<LocationEngine>();
     final auth = context.watch<AuthSessionManager>();
     final rider = auth.currentUser;
@@ -82,180 +136,181 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.brandPrimary.withOpacity(0.15),
-              child: const Icon(Icons.two_wheeler, size: 18, color: AppColors.brandPrimary),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.brandPrimaryLight,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.two_wheeler_rounded, size: 20, color: AppColors.brandPrimary),
             ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(rider?.fullName ?? 'Rider Courier', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                const Text('M&S Express Kabacan Fleet', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-              ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(rider?.fullName ?? 'Carlos Swift', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const Text('M&S Express Rider', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                ],
+              ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Sync Dispatch',
-            onPressed: _refreshData,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: AppColors.error),
-            tooltip: 'End Shift',
-            onPressed: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => const ConfirmationDialog(
-                  title: 'End Shift',
-                  content: 'Are you sure you want to go offline and sign out from your rider shift?',
-                  confirmText: 'End Shift',
-                  isDestructive: true,
-                ),
-              );
-              if (confirmed == true) {
-                locationEngine.stopTracking();
-                auth.logout();
-              }
-            },
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh',
+            onPressed: () => _refreshData(isInitial: false),
           ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppColors.brandPrimary)))
           : RefreshIndicator(
-              onRefresh: _refreshData,
+              onRefresh: () => _refreshData(isInitial: false),
               child: ListView(
                 padding: const EdgeInsets.all(18),
                 children: [
-                  // Shift Status Header Card
+                  // 1. Shift Duty Status & Metrics Card
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      gradient: _status == RiderStatus.available
-                          ? AppColors.riderStatusGradient
-                          : (_status == RiderStatus.busy ? AppColors.primaryGradient : AppColors.darkCardGradient),
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (_status == RiderStatus.available ? AppColors.brandAccent : AppColors.brandPrimary).withOpacity(0.3),
-                          blurRadius: 14,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: AppColors.premiumShadow,
                     ),
                     child: Column(
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            Row(
                               children: [
-                                const Text(
-                                  'CURRENT DUTY STATUS',
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white70, letterSpacing: 1),
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: _status == RiderStatus.available
+                                        ? AppColors.brandAccentLight
+                                        : (_status == RiderStatus.busy ? AppColors.brandPrimaryLight : const Color(0xFFF1F5F9)),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    _status == RiderStatus.available ? Icons.check_circle_rounded : (_status == RiderStatus.busy ? Icons.two_wheeler_rounded : Icons.pause_circle_rounded),
+                                    color: _status == RiderStatus.available ? AppColors.brandAccent : (_status == RiderStatus.busy ? AppColors.brandPrimary : AppColors.textSecondary),
+                                    size: 24,
+                                  ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _status.label.toUpperCase(),
-                                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'DUTY STATUS',
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.textSecondary, letterSpacing: 0.8),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _status.label.toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        color: _status == RiderStatus.available ? AppColors.brandAccent : (_status == RiderStatus.busy ? AppColors.brandPrimary : AppColors.textPrimary),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                             if (_status != RiderStatus.busy)
                               Switch(
                                 value: _status == RiderStatus.available,
-                                activeColor: Colors.white,
-                                activeTrackColor: Colors.white38,
+                                activeColor: AppColors.brandAccent,
                                 onChanged: _toggleAvailability,
                               ),
                           ],
                         ),
                         const SizedBox(height: 16),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.18),
-                            borderRadius: BorderRadius.circular(12),
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(14),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              _buildShiftStat('Deliveries', '${_pastDeliveries.length}'),
-                              Container(height: 24, width: 1, color: Colors.white24),
-                              _buildShiftStat('Est. Fees', Formatters.currency(totalEarned)),
-                              Container(height: 24, width: 1, color: Colors.white24),
-                              _buildShiftStat('GPS Engine', locationEngine.isSharingLocation ? 'ACTIVE' : 'STANDBY'),
+                              _buildShiftStat('Completed', '${_pastDeliveries.length}', AppColors.brandPrimary),
+                              Container(height: 28, width: 1, color: AppColors.border),
+                              _buildShiftStat('Earnings', Formatters.currency(totalEarned), AppColors.brandAccent),
+                              Container(height: 28, width: 1, color: AppColors.border),
+                              _buildShiftStat('Location Status', locationEngine.isSharingLocation ? 'LIVE' : 'STANDBY', AppColors.info),
                             ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
 
-                  // GPS Telemetry HUD
+                  // 2. Active GPS HUD
                   if (locationEngine.isSharingLocation) ...[
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.brandSecondary,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.brandPrimary.withOpacity(0.5)),
+                        boxShadow: AppColors.premiumShadow,
                       ),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: AppColors.brandPrimary.withOpacity(0.2),
+                              color: AppColors.brandAccentLight,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.gps_fixed, color: AppColors.brandPrimary, size: 22),
+                            child: const Icon(Icons.gps_fixed_rounded, color: AppColors.brandAccent, size: 20),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: const [
-                                Text('Live Location Telemetry Streaming', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                                Text('Live Location Sharing Active', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 13)),
                                 SizedBox(height: 2),
-                                Text('10s pulse • Coordinates broadcast to customer & admin', style: TextStyle(color: Colors.white60, fontSize: 11)),
+                                Text('Sharing live location with customer and admin', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
                               ],
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppColors.brandAccent.withOpacity(0.2),
+                              color: AppColors.brandAccentLight,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Text('STREAMING', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.brandAccent)),
+                            child: const Text('LIVE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.brandAccent)),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
                   ],
 
-                  // Active Task Section
-                  const Text('Active Dispatch Mission', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                  // 3. Current Delivery Card
+                  const Text('Current Delivery', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppColors.textPrimary)),
                   const SizedBox(height: 10),
                   if (_activeDelivery == null)
                     const EmptyStateView(
-                      icon: Icons.check_circle_outline,
-                      title: 'No Active Orders',
-                      description: 'Keep your status set to "Available" to receive new pickup and delivery tasks from dispatch.',
+                      icon: Icons.check_circle_outline_rounded,
+                      title: 'No Active Delivery',
+                      description: 'Set your duty status to "Available" to receive new delivery orders.',
                     )
                   else
                     Card(
+                      elevation: 1.5,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: AppColors.brandPrimary, width: 2),
+                        borderRadius: BorderRadius.circular(18),
+                        side: BorderSide.none,
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(18),
@@ -269,53 +324,62 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen> {
                                 StatusBadge(status: _activeDelivery!.order.status),
                               ],
                             ),
-                            const Divider(height: 24),
+                            const Divider(height: 20),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.storefront, size: 18, color: AppColors.brandPrimary),
-                                const SizedBox(width: 10),
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(color: AppColors.brandPrimaryLight, borderRadius: BorderRadius.circular(8)),
+                                  child: const Icon(Icons.storefront_rounded, size: 18, color: AppColors.brandPrimary),
+                                ),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      const Text('PICKUP RESTAURANT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.textMuted)),
-                                      Text(_activeDelivery!.order.storeName ?? 'Store Pickup', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                                      const Text('PICKUP STORE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.textMuted)),
+                                      Text(_activeDelivery!.order.storeName ?? 'Store Pickup', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.textPrimary)),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 12),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.pin_drop, size: 18, color: AppColors.error),
-                                const SizedBox(width: 10),
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(color: AppColors.statusCancelledBg, borderRadius: BorderRadius.circular(8)),
+                                  child: const Icon(Icons.pin_drop_rounded, size: 18, color: AppColors.error),
+                                ),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      const Text('CUSTOMER DESTINATION', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.textMuted)),
-                                      Text(_activeDelivery!.order.deliveryAddress, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                                      const Text('DELIVERY ADDRESS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.textMuted)),
+                                      Text(_activeDelivery!.order.deliveryAddress, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
-                            const Divider(height: 24),
+                            const Divider(height: 20),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Cash to Collect (COD)', style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+                                    const Text('Collect from Customer (COD)', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w700)),
                                     Text(Formatters.currency(_activeDelivery!.order.totalAmount), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.brandPrimary)),
                                   ],
                                 ),
-                                AppButton(
-                                  text: 'Open Mission →',
+                                ElevatedButton.icon(
+                                  icon: const Icon(Icons.navigation_rounded, size: 16),
+                                  label: const Text('View Delivery →'),
                                   onPressed: () async {
                                     await Navigator.of(context).push(MaterialPageRoute(
                                       builder: (_) => ActiveDeliveryScreen(orderDetail: _activeDelivery!),
@@ -329,29 +393,18 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen> {
                         ),
                       ),
                     ),
-
-                  const SizedBox(height: 24),
-                  const Text('Completed Shifts Today', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 10),
-                  if (_pastDeliveries.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text('No completed deliveries recorded in this shift yet.', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
-                    )
-                  else
-                    ..._pastDeliveries.map((o) => OrderCard(order: o)),
                 ],
               ),
             ),
     );
   }
 
-  Widget _buildShiftStat(String label, String value) {
+  Widget _buildShiftStat(String label, String value, Color color) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15)),
+        Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 15)),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600)),
+        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600)),
       ],
     );
   }

@@ -22,7 +22,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Rider Portal'), findsOneWidget);
-    expect(find.text('START COURIER SHIFT'), findsOneWidget);
+    expect(find.text('Rider Login'), findsOneWidget);
+    expect(find.text('LOG IN'), findsOneWidget);
   });
 }

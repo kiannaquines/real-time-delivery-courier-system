@@ -10,11 +10,18 @@ import 'src/screens/home/home_screen.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // In production, configure through environment variables
   const apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8000');
 
-  final apiClient = ApiClient(baseUrl: apiBaseUrl);
+  String? currentToken;
+  final apiClient = ApiClient(
+    baseUrl: apiBaseUrl,
+    tokenProvider: () async => currentToken,
+  );
   final authSession = AuthSessionManager(apiClient: apiClient);
+  authSession.addListener(() {
+    currentToken = authSession.accessToken;
+    apiClient.setAuthToken(authSession.accessToken);
+  });
 
   runApp(
     MultiProvider(
@@ -48,11 +55,27 @@ class _CustomerAppState extends State<CustomerApp> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthSessionManager>();
 
+    Widget homeWidget;
+    if (auth.status == AuthStatus.authenticating && !auth.isAuthenticated) {
+      homeWidget = const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.brandPrimary),
+          ),
+        ),
+      );
+    } else if (auth.isAuthenticated) {
+      homeWidget = const CustomerHomeScreen();
+    } else {
+      homeWidget = const CustomerLoginScreen();
+    }
+
     return MaterialApp(
       title: 'M&S Delivery Customer',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: auth.isAuthenticated ? const CustomerHomeScreen() : const CustomerLoginScreen(),
+      home: homeWidget,
     );
   }
 }
