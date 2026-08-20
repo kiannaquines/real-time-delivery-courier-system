@@ -63,6 +63,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Mount Health and Cron
 app.include_router(health.router)
+app.include_router(health.router, prefix="/api/v1")
 app.include_router(cron.router, prefix="/api/v1")
 
 # Mount API v1 Routers
@@ -81,3 +82,4 @@ api_v1_routers = [
 
 for r in api_v1_routers:
     app.include_router(r, prefix="/api/v1")
+
