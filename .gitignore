@@ -9,6 +9,10 @@
 *.pem
 *.key
 *.cert
+account.json
+*service_account*.json
+*service-account*.json
+
 
 # Python & Virtual Environments
 .venv/
