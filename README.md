@@ -24,39 +24,81 @@ A modern, full-stack real-time food delivery and courier dispatch platform tailo
 ## 🏛 Architecture Overview
 
 ```mermaid
-graph TD
-    subgraph Cloudflare Global Edge
-        CF_API[Backend Cloudflare Tunnel<br/>https://*.trycloudflare.com]
-        CF_ADMIN[Admin Console Cloudflare Tunnel<br/>https://*.trycloudflare.com]
+flowchart TB
+    subgraph Clients["📱 Client Applications (Flutter Multi-Platform)"]
+        ADMIN["💻 Admin Portal<br/>(Flutter Web • Port 3000)"]
+        CUSTOMER["🛍️ Customer App<br/>(iOS Simulator / Mobile / Web • Port 3001)"]
+        RIDER["🛵 Rider App<br/>(iOS Simulator / Mobile / Web • Port 3002)"]
     end
 
-    subgraph Client Apps (Flutter)
-        ADMIN_WEB[Admin Portal<br/>Flutter Web :3000]
-        RIDER_APP[Rider App<br/>iOS Simulator / Web :3002]
-        CUSTOMER_APP[Customer App<br/>iOS Simulator / Web :3001]
+    subgraph SharedPackages["📦 Shared Flutter Packages (Dart)"]
+        DOMAIN["domain_models<br/>(Entities, Enums, Formatters)"]
+        APICLIENT["api_client<br/>(HTTP REST Client & WebSockets)"]
+        AUTHSESSION["auth_session<br/>(JWT Token & Session Storage)"]
+        DESIGNSYSTEM["design_system<br/>(Theme, Colors, Shared UI Widgets)"]
     end
 
-    subgraph Core Backend (FastAPI :8000)
-        FASTAPI[FastAPI ASGI Server]
-        WS_HUB[WebSocket Dispatch & GPS Hub]
-        DB[(SQLite / PostgreSQL Database)]
+    subgraph CloudflareEdge["🌐 Cloudflare Global Edge Network"]
+        CF_ADMIN["Admin Tunnel<br/>https://*.trycloudflare.com"]
+        CF_API["Backend API & WS Tunnel<br/>https://*.trycloudflare.com"]
     end
 
-    CF_ADMIN -->|Host: 0.0.0.0:3000| ADMIN_WEB
-    CF_API -->|Forward to :8000| FASTAPI
+    subgraph BackendCore["⚡ FastAPI Backend Engine (Port 8000)"]
+        AUTH_ROUTER["Auth & Security Router (JWT)"]
+        DISPATCH_ENGINE["Orders & Dispatch Engine"]
+        WS_HUB["WebSocket Telemetry & Live Tracking Hub"]
+        ROUTING["Kabacan Geospatial & ETA Calculator"]
+    end
 
-    ADMIN_WEB -->|REST & WebSockets| CF_API
-    RIDER_APP -->|REST & GPS Telemetry WS| CF_API
-    CUSTOMER_APP -->|REST & Order Tracking WS| CF_API
+    subgraph StorageLayer["💾 Persistence Layer"]
+        DB[("SQLite / PostgreSQL Database<br/>(SQLAlchemy ORM)")]
+    end
 
-    FASTAPI --> DB
-    FASTAPI --> WS_HUB
+    %% External Connections through Cloudflare
+    CF_ADMIN -->|Host: 0.0.0.0:3000| ADMIN
+    ADMIN -->|REST & WebSockets| CF_API
+    CUSTOMER -->|REST & Order Tracking WS| CF_API
+    RIDER -->|REST & GPS Telemetry WS| CF_API
+
+    CF_API --> AUTH_ROUTER
+    CF_API --> DISPATCH_ENGINE
+    CF_API --> WS_HUB
+
+    %% Client Package Dependencies
+    ADMIN -.-> SharedPackages
+    CUSTOMER -.-> SharedPackages
+    RIDER -.-> SharedPackages
+
+    %% Backend Internals
+    AUTH_ROUTER --> DB
+    DISPATCH_ENGINE --> DB
+    DISPATCH_ENGINE --> ROUTING
+    DISPATCH_ENGINE -.->|Broadcast Status| WS_HUB
+    WS_HUB -.->|Real-Time Broadcast| CUSTOMER
+    WS_HUB -.->|Live Fleet Update| ADMIN
 ```
 
-- **Backend (`backend/`)**: FastAPI, SQLAlchemy, SQLite/PostgreSQL, JWT Authentication, WebSocket Hub for live rider coordinates & order statuses.
-- **Admin Portal (`ui/apps/admin`)**: Operations dashboard, live interactive map (Mapbox / OpenStreetMap), order assignment, rider management, store & menu catalog, sales reports, and activity logs.
-- **Rider App (`ui/apps/rider`)**: Shift dashboard, location sharing engine, interactive turn-by-turn routing, pickup & delivery task checklist, cash collection (COD), and earnings log.
-- **Customer App (`ui/apps/customer`)**: Restaurant browsing, cart management with fixed Kabacan delivery fee, cash on delivery (COD) checkout, live order tracking with polyline route visualization, and saved addresses.
+### System Architecture Layers
+
+1. **Client Applications Layer (`ui/apps/`)**:
+   - **Admin Portal (`admin/`)**: Web-first operations cockpit featuring interactive live radar map (Mapbox GL / OpenStreetMap), rider assignment, store & menu catalog management, sales analytics (COD remittance), and audit log trail.
+   - **Customer Mobile App (`customer/`)**: Food discovery, cart management with fixed Kabacan delivery rate, cash on delivery (COD) checkout, live GPS delivery tracking with polyline route, and address book with local landmarks.
+   - **Rider Mobile App (`rider/`)**: On-duty GPS telemetry sharing engine, active delivery mission checklist (Store Pickup $\rightarrow$ Heading to Customer $\rightarrow$ Delivery Completed & COD Collection), and earnings history.
+
+2. **Shared Package Foundation (`ui/packages/`)**:
+   - **`domain_models`**: Pure Dart single-source-of-truth domain models (`Order`, `Store`, `MenuItem`, `RiderProfile`, `Address`) and status enums (`OrderStatus`, `RiderStatus`, `PaymentStatus`).
+   - **`api_client`**: Unified REST HTTP client and real-time WebSocket client with automatic JWT token injection and error handling.
+   - **`auth_session`**: Cross-platform authentication manager supporting secure browser and device session persistence.
+   - **`design_system`**: Standardized modern design system (vibrant branding, dark/light surface tokens, custom badges, dialogs, and formatters).
+
+3. **Global Edge & Tunneling Layer (Cloudflare)**:
+   - **Zero-Config Public HTTPS / WSS**: Exposes local FastAPI backend and Flutter web services to the internet through secure encrypted tunnels with zero port-forwarding or public IP requirements.
+   - **Host-Header Translation**: Automatic host-header rewriting (`--http-host-header 0.0.0.0:3000`) for seamless Flutter web server integration.
+
+4. **FastAPI Backend Services (`backend/`)**:
+   - **REST API Routers (`/api/v1/`)**: Modular endpoints for authentication, orders, riders, stores, categories, reports, and administrative audit logs.
+   - **Real-Time WebSocket Hub (`/api/v1/ws/`)**: Broadcasts order status state transitions and streams real-time rider latitude/longitude coordinates to tracking customers and admin radar.
+   - **Geospatial & Seed Engine**: Built-in coordinates and street presets for Kabacan, Cotabato (Poblacion, USM Campus, Osias, Kayaga, Bannawag) with automated seed migration.
 
 ---
 
