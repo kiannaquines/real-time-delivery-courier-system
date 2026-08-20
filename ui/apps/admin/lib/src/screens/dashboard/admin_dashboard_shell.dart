@@ -9,6 +9,7 @@ import '../riders/admin_riders_screen.dart';
 import '../live_map/admin_live_map_screen.dart';
 import '../reports/admin_reports_screen.dart';
 import '../audit/admin_audit_logs_screen.dart';
+import '../health/admin_supabase_health_screen.dart';
 
 class AdminDashboardShell extends StatefulWidget {
   const AdminDashboardShell({super.key});
@@ -56,6 +57,11 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
       'icon': Icons.security_outlined,
       'selectedIcon': Icons.security_rounded,
     },
+    {
+      'title': 'Supabase Health',
+      'icon': Icons.storage_outlined,
+      'selectedIcon': Icons.storage_rounded,
+    },
   ];
 
   @override
@@ -71,6 +77,7 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
       const AdminLiveMapScreen(),
       const AdminReportsScreen(),
       const AdminAuditLogsScreen(),
+      const AdminSupabaseHealthScreen(),
     ];
 
     return Scaffold(

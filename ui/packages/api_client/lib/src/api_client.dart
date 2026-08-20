@@ -448,4 +448,15 @@ class ApiClient {
     );
     return _handleResponse(resp) as Map<String, dynamic>;
   }
+
+  // --- Supabase & Database Health Diagnostics ---
+  Future<Map<String, dynamic>> getSupabaseHealth() async {
+    final headers = await _headers();
+    final resp = await _client.get(
+      Uri.parse('$_normalizedBaseUrl/api/v1/health/supabase'),
+      headers: headers,
+    );
+    return _handleResponse(resp) as Map<String, dynamic>;
+  }
 }
+
