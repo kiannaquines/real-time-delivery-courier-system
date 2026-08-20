@@ -125,8 +125,10 @@ flowchart TB
 │       ├── auth_session/    # JWT token storage & session manager
 │       ├── design_system/   # Shared UI components, colors, and typography
 │       └── domain_models/   # Shared domain entities & enums
-├── start.sh                  # Interactive bash launcher (Tunnels + Simulators + Hot-Reload)
-├── start.py                  # Python unified multi-app launcher
+├── start.sh                  # Interactive macOS/Linux bash launcher
+├── start.bat                 # Windows Command Prompt batch launcher
+├── start.ps1                 # Windows PowerShell multi-app launcher
+├── start.py                  # Cross-platform Python unified launcher
 └── README.md
 ```
 
@@ -134,56 +136,63 @@ flowchart TB
 
 ## ⚙️ Prerequisites
 
-Make sure the following dependencies are installed on your machine:
+### macOS & Linux
+1. **Flutter SDK** (`>= 3.20.0`): `brew install --cask flutter` or from [flutter.dev](https://flutter.dev)
+2. **Python** (`>= 3.10`): `brew install python` or `sudo apt install python3 python3-pip python3-venv`
+3. **Cloudflare CLI**: `brew install cloudflared` or `sudo apt-get install cloudflared`
+4. **Xcode & Simulators** *(macOS only)*: `xcode-select --install`
 
-1. **Flutter SDK** (`>= 3.20.0`):
-   ```bash
-   flutter --version
-   flutter doctor
-   ```
-2. **Python** (`>= 3.10`):
-   ```bash
-   python3 --version
-   ```
-3. **Cloudflare `cloudflared` CLI**:
-   - **macOS (Homebrew)**:
-     ```bash
-     brew install cloudflared
-     ```
-   - **Linux (Debian/Ubuntu)**:
-     ```bash
-     sudo apt-get install cloudflared
-     ```
-   - **Windows**:
-     ```powershell
-     winget install Cloudflare.cloudflared
-     ```
-4. **Xcode & iOS Simulator** *(macOS only, optional for running native simulators)*:
-   ```bash
-   xcode-select --install
-   ```
+### Windows 10/11
+Install all requirements in one PowerShell command via `winget`:
+```powershell
+winget install -e --id Python.Python.3.11
+winget install -e --id Flutter.Flutter
+winget install -e --id Git.Git
+winget install -e --id Cloudflare.cloudflared
+```
+*Note: Make sure to restart your terminal after installing so PATH changes take effect.*
 
 ---
 
-## ⚡ Quick Start (One-Command Launcher)
+## ⚡ Quick Start Launchers
 
-The easiest and recommended way to start the entire system with Cloudflare Tunnels, dual mobile simulators (or web fallbacks), and interactive hot-reloading is using [`./start.sh`](file:///Users/kianjearardnaquines/mns/start.sh):
-
+### Option A: macOS / Linux (`./start.sh`)
 ```bash
 chmod +x start.sh
 ./start.sh
 ```
 
-### What `./start.sh` does automatically:
+### Option B: Windows Command Prompt (`start.bat`)
+Double-click `start.bat` or run:
+```cmd
+start.bat
+```
+
+### Option C: Windows PowerShell (`.\start.ps1`)
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+.\start.ps1
+```
+
+### Option D: Cross-Platform Python (`python start.py`)
+```bash
+python start.py
+```
+
+---
+
+### What the Launchers Do Automatically:
 1. **Frees all required ports** (`8000`, `3000`, `3001`, `3002`).
-2. **Migrates and seeds the database** with Kabacan stores, menu items, sample orders, and accounts.
-3. **Starts the FastAPI Backend** on port `8000`.
-4. **Spawns Cloudflare Tunnels**:
+2. **Creates Python virtual environment (`.venv`)** and installs `requirements.txt`.
+3. **Migrates and seeds the database** with Kabacan stores, menu items, sample orders, and accounts.
+4. **Starts the FastAPI Backend** on port `8000`.
+5. **Spawns Cloudflare Tunnels**:
    - Public Backend API Tunnel (`https://<api-subdomain>.trycloudflare.com`)
    - Public Admin Console Tunnel (`https://<admin-subdomain>.trycloudflare.com`)
-5. **Detects & boots dual iOS Simulators** (iPhone 16 for Customer, iPhone 16 Pro for Rider) or falls back to Web Server ports.
-6. **Passes the public API URL** to all Flutter apps via `--dart-define=API_BASE_URL=<Cloudflare_URL>`.
-7. **Opens interactive Hot-Reload control pipes**.
+6. **Launches Flutter Applications**:
+   - On macOS: Boots dual iOS Simulators (iPhone 16 for Customer, iPhone 16 Pro for Rider) and Admin Web.
+   - On Windows/Linux: Launches Admin Web (`:3000`), Customer Web (`:3001`), and Rider Web (`:3002`).
+7. **Configures host header rewriting** (`--http-host-header 0.0.0.0:3000`) so Cloudflare web routing works seamlessly.
 
 ### Interactive Controls (in terminal):
 | Key | Action |

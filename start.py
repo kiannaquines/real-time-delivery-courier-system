@@ -9,17 +9,24 @@ import sys
 import subprocess
 import signal
 import threading
+import shutil
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 MAPBOX_TOKEN = "pk.eyJ1IjoiamVhcmFyZCIsImEiOiJjbWE2ZjNlM2YwM2wyMmlvYW9mdDQ5OHJ5In0.57WdNE6fCl-qVJAoMZe40Q"
 
 os.environ["MAPBOX_ACCESS_TOKEN"] = MAPBOX_TOKEN
 
+# Cross-platform venv executable paths
+IS_WINDOWS = os.name == 'nt'
+VENV_DIR = os.path.join(PROJECT_ROOT, ".venv")
+PYTHON_BIN = os.path.join(VENV_DIR, "Scripts" if IS_WINDOWS else "bin", "python.exe" if IS_WINDOWS else "python")
+UVICORN_BIN = os.path.join(VENV_DIR, "Scripts" if IS_WINDOWS else "bin", "uvicorn.exe" if IS_WINDOWS else "uvicorn")
+
 SERVICES = [
     {
         "name": "BACKEND",
         "cmd": [
-            os.path.join(PROJECT_ROOT, ".venv", "bin", "uvicorn"),
+            PYTHON_BIN, "-m", "uvicorn",
             "app.main:app",
             "--host", "0.0.0.0",
             "--port", "8000",
@@ -74,10 +81,18 @@ SERVICES = [
 def free_ports(ports=[8000, 3000, 3001, 3002]):
     for port in ports:
         try:
-            out = subprocess.check_output(["lsof", "-ti", f"tcp:{port}"], stderr=subprocess.DEVNULL)
-            for pid in out.decode().strip().splitlines():
-                if pid:
-                    os.kill(int(pid), signal.SIGKILL)
+            if IS_WINDOWS:
+                out = subprocess.check_output(f"netstat -ano | findstr :{port}", shell=True, stderr=subprocess.DEVNULL)
+                for line in out.decode().strip().splitlines():
+                    parts = line.split()
+                    if len(parts) >= 5 and parts[1].endswith(f":{port}"):
+                        pid = parts[-1]
+                        subprocess.run(f"taskkill /F /PID {pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                out = subprocess.check_output(["lsof", "-ti", f"tcp:{port}"], stderr=subprocess.DEVNULL)
+                for pid in out.decode().strip().splitlines():
+                    if pid:
+                        os.kill(int(pid), signal.SIGKILL)
         except Exception:
             pass
 
@@ -97,10 +112,17 @@ def main():
     print("Freeing target ports (8000, 3000, 3001, 3002)...")
     free_ports()
 
-    # 2. Seed database
-    print("Ensuring database migration and seed data...")
+    # 2. Virtual Environment & Seed
+    if not os.path.exists(PYTHON_BIN):
+        print(f"Creating Python virtual environment in {VENV_DIR}...")
+        subprocess.run([sys.executable, "-m", "venv", VENV_DIR], check=True)
+
+    print("Ensuring dependencies and database seed data...")
     subprocess.run([
-        os.path.join(PROJECT_ROOT, ".venv", "bin", "python"),
+        PYTHON_BIN, "-m", "pip", "install", "-r", os.path.join(PROJECT_ROOT, "backend", "requirements.txt"), "-q"
+    ], check=False)
+    subprocess.run([
+        PYTHON_BIN,
         os.path.join(PROJECT_ROOT, "backend", "app", "seed.py"),
     ], check=True)
 
