@@ -154,6 +154,29 @@ winget install -e --id Cloudflare.cloudflared
 
 ---
 
+## 🛠️ One-Click Automated Installation (Setup All Needed Components)
+
+Before starting the system for the first time on a new computer, run the automated installation script. It will inspect your environment, create the Python virtual environment, install all backend packages, seed the database with test accounts and Kabacan stores, enable Flutter Web, and resolve dependencies across all 5 shared packages and 3 client apps.
+
+### macOS & Linux
+```bash
+./install.sh
+```
+*(Or manually run: `python3 install.py`)*
+
+### Windows (Command Prompt)
+Double-click `install.bat` or run:
+```cmd
+install.bat
+```
+
+### Windows (PowerShell)
+```powershell
+.\install.ps1
+```
+
+---
+
 ## ⚡ Quick Start Launchers
 
 ### Option A: macOS / Linux (`./start.sh`)
