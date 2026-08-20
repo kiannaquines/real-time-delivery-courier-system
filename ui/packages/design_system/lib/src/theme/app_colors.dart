@@ -26,6 +26,7 @@ class AppColors {
   static const Color textPrimary = Color(0xFF0F172A); // Deep Navy Slate
   static const Color textSecondary = Color(0xFF64748B); // Muted Slate
   static const Color textMuted = Color(0xFF94A3B8); // Light Slate
+  static const Color textTertiary = textMuted; // Light Slate
   static const Color textDisabled = Color(0xFFCBD5E1);
 
   // Status & Semantic Feedback (Crisp Pastels)

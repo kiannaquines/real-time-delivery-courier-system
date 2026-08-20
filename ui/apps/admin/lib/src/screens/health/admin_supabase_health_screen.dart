@@ -389,7 +389,7 @@ class _AdminSupabaseHealthScreenState extends State<AdminSupabaseHealthScreen> {
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+            style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
           ),
         ],
       ),
@@ -497,7 +497,7 @@ class _AdminSupabaseHealthScreenState extends State<AdminSupabaseHealthScreen> {
                           ),
                           Text(
                             key,
-                            style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                            style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
                           ),
                         ],
                       ),
@@ -645,7 +645,7 @@ class _AdminSupabaseHealthScreenState extends State<AdminSupabaseHealthScreen> {
                       const SnackBar(content: Text('Copied to clipboard'), duration: Duration(seconds: 1)),
                     );
                   },
-                  child: const Icon(Icons.copy_rounded, size: 14, color: AppColors.textTertiary),
+                  child: const Icon(Icons.copy_rounded, size: 14, color: AppColors.textMuted),
                 ),
               ],
             ],
