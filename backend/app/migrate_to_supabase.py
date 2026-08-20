@@ -201,12 +201,22 @@ def migrate(target_url: str, source_sqlite_path: Path = None, clean_target: bool
 
             print(f"   [{idx}/{len(MIGRATION_MODELS)}] {table_name:<18} ({src_count} records) ... ", end="", flush=True)
 
+            # Build valid parent ID sets for foreign key validation
+            valid_user_ids = {u.id for u in dst_session.query(User.id).all()}
+            valid_delivery_ids = {d.id for d in dst_session.query(Delivery.id).all()}
+            valid_store_ids = {s.id for s in dst_session.query(Store.id).all()}
+            valid_order_ids = {o.id for o in dst_session.query(Order.id).all()}
+            valid_category_ids = {c.id for c in dst_session.query(MenuCategory.id).all()}
+            valid_menu_item_ids = {m.id for m in dst_session.query(MenuItem.id).all()}
+            existing_target_ids = {r.id for r in dst_session.query(model_cls.id).all()}
+
             # Extract model column names
             mapper = inspect(model_cls)
             column_names = [col.key for col in mapper.attrs if hasattr(col, "columns")]
 
             migrated_table_count = 0
-            batch_size = 100
+            skipped_orphans = 0
+            batch_size = 200
 
             for i in range(0, src_count, batch_size):
                 batch = records[i:i + batch_size]
@@ -217,14 +227,41 @@ def migrate(target_url: str, source_sqlite_path: Path = None, clean_target: bool
                         val = getattr(item, col, None)
                         item_data[col] = val
 
+                    # Foreign Key Safety Check against orphaned SQLite records
+                    if model_cls == RiderLocation:
+                        if item_data.get("delivery_id") not in valid_delivery_ids or item_data.get("rider_id") not in valid_user_ids:
+                            skipped_orphans += 1
+                            continue
+                    elif model_cls == RefreshToken:
+                        if item_data.get("user_id") not in valid_user_ids:
+                            skipped_orphans += 1
+                            continue
+                    elif model_cls == DeviceToken:
+                        if item_data.get("user_id") not in valid_user_ids:
+                            skipped_orphans += 1
+                            continue
+                    elif model_cls == OrderItem:
+                        if item_data.get("order_id") not in valid_order_ids or item_data.get("menu_item_id") not in valid_menu_item_ids:
+                            skipped_orphans += 1
+                            continue
+                    elif model_cls == Payment or model_cls == Delivery:
+                        if item_data.get("order_id") not in valid_order_ids:
+                            skipped_orphans += 1
+                            continue
+
                     # Merge / upsert into Supabase
-                    new_obj = model_cls(**item_data)
-                    dst_session.merge(new_obj)
+                    rec_id = item_data.get("id")
+                    if rec_id in existing_target_ids:
+                        dst_session.merge(model_cls(**item_data))
+                    else:
+                        dst_session.add(model_cls(**item_data))
+                        existing_target_ids.add(rec_id)
                     migrated_table_count += 1
                 
                 dst_session.commit()
 
-            print(f"{Style.GREEN}✔ Done ({migrated_table_count} migrated){Style.NC}")
+            orphan_msg = f" ({skipped_orphans} orphaned records filtered)" if skipped_orphans > 0 else ""
+            print(f"{Style.GREEN}✔ Done ({migrated_table_count} migrated{orphan_msg}){Style.NC}")
             total_migrated += migrated_table_count
             migration_summary.append((table_name, src_count, migrated_table_count, "Success"))
 
@@ -261,15 +298,32 @@ def main():
 
     target_url = args.target_url
     if not target_url:
-        # Check if environment already has a non-sqlite URL
-        current_env_url = os.environ.get("DATABASE_URL") or settings.DATABASE_URL
-        if current_env_url and not current_env_url.startswith("sqlite"):
-            target_url = current_env_url
+        # Check if environment has DIRECT_DATABASE_URL (session pooler) or DATABASE_URL
+        for candidate in [
+            os.environ.get("DIRECT_DATABASE_URL"),
+            os.environ.get("DATABASE_URL"),
+            getattr(settings, "DIRECT_DATABASE_URL", None),
+            getattr(settings, "DATABASE_URL", None),
+        ]:
+            if candidate and not candidate.startswith("sqlite"):
+                target_url = candidate
+                break
+
+    # If target_url still has [YOUR-PASSWORD] placeholder, prompt user for password
+    if target_url and "[YOUR-PASSWORD]" in target_url:
+        print(f"{Style.BOLD}{Style.YELLOW}Detected Supabase connection template in .env with [YOUR-PASSWORD] placeholder.{Style.NC}")
+        try:
+            pwd = input("Enter your Supabase Database Password: ").strip()
+            if pwd:
+                target_url = target_url.replace("[YOUR-PASSWORD]", pwd)
+        except (KeyboardInterrupt, EOFError):
+            print("\nMigration cancelled.")
+            sys.exit(0)
 
     if not target_url:
         print(f"{Style.BOLD}{Style.YELLOW}No Supabase PostgreSQL URL supplied.{Style.NC}")
         print("Please enter your Supabase connection string:")
-        print(f"{Style.DIM}Example: postgresql://postgres.xxxx:yourpassword@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres{Style.NC}\n")
+        print(f"{Style.DIM}Example: postgresql://postgres.xxxx:yourpassword@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres{Style.NC}\n")
         try:
             target_url = input("Supabase Connection URL: ").strip()
         except (KeyboardInterrupt, EOFError):
