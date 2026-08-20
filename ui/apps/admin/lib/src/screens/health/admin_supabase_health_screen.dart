@@ -20,7 +20,9 @@ class _AdminSupabaseHealthScreenState extends State<AdminSupabaseHealthScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchHealthData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchHealthData();
+    });
   }
 
   Future<void> _fetchHealthData() async {
@@ -51,60 +53,149 @@ class _AdminSupabaseHealthScreenState extends State<AdminSupabaseHealthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading && _healthData == null) {
+      return const Center(
+        child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppColors.brandPrimary)),
+      );
+    }
+
     return LayoutBuilder(
       builder: (ctx, constraints) {
-        final isMobile = constraints.maxWidth < 700;
-        final padding = isMobile ? 16.0 : 24.0;
+        final isMobile = constraints.maxWidth < 600;
+        final isNarrow = constraints.maxWidth < 950;
+        final padding = isMobile ? 16.0 : (isNarrow ? 20.0 : 28.0);
 
-        return SingleChildScrollView(
+        final db = _healthData?['database'] as Map<String, dynamic>? ?? {};
+        final totalRecords = db['total_records']?.toString() ?? '0';
+        final latency = (_healthData?['latency_ms'] as num?)?.toDouble() ?? 0.0;
+        final engineType = db['type']?.toString() ?? 'PostgreSQL';
+        final host = db['host']?.toString() ?? 'aws-0-ap-northeast-1.pooler.supabase.com';
+
+        final card1 = _buildMetricCard(
+          'Database Engine',
+          engineType,
+          'Supabase Cloud',
+          Icons.dns_rounded,
+          AppColors.brandPrimary,
+        );
+        final card2 = _buildMetricCard(
+          'Network Latency',
+          '${latency.toStringAsFixed(1)} ms',
+          latency < 500 ? 'Optimal Ping' : 'Cloud Interconnect',
+          Icons.speed_rounded,
+          AppColors.brandAccent,
+        );
+        final card3 = _buildMetricCard(
+          'Persisted Records',
+          totalRecords,
+          '16 tables active',
+          Icons.table_chart_rounded,
+          const Color(0xFF6366F1),
+        );
+        final card4 = _buildMetricCard(
+          'Active Pooler Port',
+          host.contains(':') ? host.split(':')[1] : '5432',
+          host.split(':')[0],
+          Icons.cloud_done_rounded,
+          AppColors.warning,
+        );
+
+        return Padding(
           padding: EdgeInsets.all(padding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: ListView(
             children: [
-              // Header & Refresh Row
-              _buildHeader(isMobile),
+              // Page Header
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 14,
+                runSpacing: 14,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Supabase Cluster Health',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _lastRefreshed != null
+                            ? 'Live PostgreSQL diagnostics • Last ping: ${_lastRefreshed!.hour.toString().padLeft(2, '0')}:${_lastRefreshed!.minute.toString().padLeft(2, '0')}:${_lastRefreshed!.second.toString().padLeft(2, '0')}'
+                            : 'Live PostgreSQL cluster diagnostics, telemetry latency, and schema metrics.',
+                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                  ElevatedButton.icon(
+                    icon: _isLoading
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.refresh_rounded, size: 16),
+                    label: Text(_isLoading ? 'Pinging...' : 'Test Connection'),
+                    onPressed: _isLoading ? null : _fetchHealthData,
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
 
-              if (_isLoading && _healthData == null)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 80),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text(
-                          'Pinging Supabase PostgreSQL & Services...',
-                          style: TextStyle(color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else if (_errorMessage != null && _healthData == null)
+              if (_errorMessage != null && _healthData == null)
                 _buildErrorCard()
               else ...[
                 // Main Status Banner
-                _buildStatusBanner(isMobile),
+                _buildStatusBanner(),
                 const SizedBox(height: 20),
 
-                // 4 Key KPI Metrics Cards
-                _buildMetricsGrid(constraints),
+                // Responsive KPI Cards
+                if (isMobile) ...[
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      SizedBox(width: constraints.maxWidth - (padding * 2), child: card1),
+                      SizedBox(width: constraints.maxWidth - (padding * 2), child: card2),
+                      SizedBox(width: constraints.maxWidth - (padding * 2), child: card3),
+                      SizedBox(width: constraints.maxWidth - (padding * 2), child: card4),
+                    ],
+                  ),
+                ] else if (isNarrow) ...[
+                  Row(children: [Expanded(child: card1), const SizedBox(width: 14), Expanded(child: card2)]),
+                  const SizedBox(height: 14),
+                  Row(children: [Expanded(child: card3), const SizedBox(width: 14), Expanded(child: card4)]),
+                ] else ...[
+                  Row(
+                    children: [
+                      Expanded(child: card1),
+                      const SizedBox(width: 16),
+                      Expanded(child: card2),
+                      const SizedBox(width: 16),
+                      Expanded(child: card3),
+                      const SizedBox(width: 16),
+                      Expanded(child: card4),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 24),
 
-                // Two Columns: Table Inventory & Cloud Services
-                if (constraints.maxWidth >= 1000)
+                // Tables Inventory & Cluster Configuration Cards
+                if (!isNarrow)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(flex: 3, child: _buildTableInventoryCard()),
+                      Expanded(flex: 3, child: _buildTableInventoryCard(constraints, padding, isNarrow)),
                       const SizedBox(width: 24),
                       Expanded(flex: 2, child: _buildCloudAndPoolDetailsCard()),
                     ],
                   )
                 else ...[
-                  _buildTableInventoryCard(),
+                  _buildTableInventoryCard(constraints, padding, isNarrow),
                   const SizedBox(height: 24),
                   _buildCloudAndPoolDetailsCard(),
                 ],
@@ -116,105 +207,73 @@ class _AdminSupabaseHealthScreenState extends State<AdminSupabaseHealthScreen> {
     );
   }
 
-  Widget _buildHeader(bool isMobile) {
-    return Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 16,
-      runSpacing: 12,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
+  Widget _buildMetricCard(String title, String value, String subtitle, IconData icon, Color color) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF3ECF8E).withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.storage_rounded,
-                color: Color(0xFF10B981),
-                size: 28,
-              ),
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: color.withValues(alpha: 0.12),
+              child: Icon(icon, color: color, size: 22),
             ),
-            const SizedBox(width: 14),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Supabase Cluster Health',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.5,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary),
                   ),
-                ),
-                Text(
-                  _lastRefreshed != null
-                      ? 'Last ping: ${_lastRefreshed!.hour.toString().padLeft(2, '0')}:${_lastRefreshed!.minute.toString().padLeft(2, '0')}:${_lastRefreshed!.second.toString().padLeft(2, '0')}'
-                      : 'Live PostgreSQL Diagnostics',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.textPrimary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-        ElevatedButton.icon(
-          onPressed: _isLoading ? null : _fetchHealthData,
-          icon: _isLoading
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                )
-              : const Icon(Icons.refresh_rounded, size: 18),
-          label: Text(_isLoading ? 'Pinging...' : 'Test Connection'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF10B981),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildStatusBanner(bool isMobile) {
+  Widget _buildStatusBanner() {
     final db = _healthData?['database'] as Map<String, dynamic>? ?? {};
     final isConnected = db['connected'] == true;
     final latency = (_healthData?['latency_ms'] as num?)?.toDouble() ?? 0.0;
-    final status = _healthData?['status']?.toString().toUpperCase() ?? 'UNKNOWN';
-
-    final isHealthy = isConnected && status == 'HEALTHY';
+    final status = _healthData?['status']?.toString().toUpperCase() ?? 'HEALTHY';
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isConnected ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+        color: isConnected ? AppColors.brandAccentLight : const Color(0xFFFEE2E2),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isConnected ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA),
-          width: 1.5,
+          color: isConnected ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA),
         ),
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: isConnected ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-              shape: BoxShape.circle,
-            ),
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: isConnected ? AppColors.brandAccent : AppColors.error,
             child: Icon(
-              isConnected ? Icons.check_circle_outline : Icons.error_outline,
+              isConnected ? Icons.check_rounded : Icons.priority_high_rounded,
               color: Colors.white,
-              size: 26,
+              size: 20,
             ),
           ),
           const SizedBox(width: 16),
@@ -225,16 +284,16 @@ class _AdminSupabaseHealthScreenState extends State<AdminSupabaseHealthScreen> {
                 Row(
                   children: [
                     Text(
-                      isConnected ? 'Supabase PostgreSQL is Connected' : 'Database Connection Issue',
+                      isConnected ? 'Supabase PostgreSQL Online' : 'Database Disconnected',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
                         color: isConnected ? const Color(0xFF065F46) : const Color(0xFF991B1B),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: isConnected ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2),
                         borderRadius: BorderRadius.circular(6),
@@ -253,10 +312,10 @@ class _AdminSupabaseHealthScreenState extends State<AdminSupabaseHealthScreen> {
                 const SizedBox(height: 4),
                 Text(
                   isConnected
-                      ? 'Live roundtrip latency: ${latency.toStringAsFixed(1)} ms • Direct communication with cloud database active.'
-                      : 'Error: ${db['error'] ?? 'Could not reach database'}',
+                      ? 'Roundtrip ping: ${latency.toStringAsFixed(1)} ms • Connected via transaction pooler.'
+                      : 'Error: ${db['error'] ?? 'Connection timed out'}',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: isConnected ? const Color(0xFF047857) : const Color(0xFF991B1B),
                   ),
                 ),
@@ -268,262 +327,124 @@ class _AdminSupabaseHealthScreenState extends State<AdminSupabaseHealthScreen> {
     );
   }
 
-  Widget _buildMetricsGrid(BoxConstraints constraints) {
-    final db = _healthData?['database'] as Map<String, dynamic>? ?? {};
-    final totalRecords = db['total_records']?.toString() ?? '0';
-    final latency = (_healthData?['latency_ms'] as num?)?.toDouble() ?? 0.0;
-    final engineType = db['type']?.toString() ?? 'PostgreSQL';
-    final host = db['host']?.toString() ?? 'localhost';
-
-    final isWide = constraints.maxWidth >= 1000;
-    final isTablet = constraints.maxWidth >= 600 && !isWide;
-
-    final cards = [
-      _buildMetricCard(
-        title: 'Database Engine',
-        value: engineType,
-        subtitle: 'Managed Supabase',
-        icon: Icons.dns_rounded,
-        iconColor: const Color(0xFF3B82F6),
-        bgColor: const Color(0xFFEFF6FF),
-      ),
-      _buildMetricCard(
-        title: 'Network Ping Latency',
-        value: '${latency.toStringAsFixed(1)} ms',
-        subtitle: latency < 100 ? 'Optimal Performance' : 'Cloud Interconnect',
-        icon: Icons.speed_rounded,
-        iconColor: const Color(0xFF10B981),
-        bgColor: const Color(0xFFECFDF5),
-      ),
-      _buildMetricCard(
-        title: 'Total Persisted Records',
-        value: totalRecords,
-        subtitle: 'Across 16 schema tables',
-        icon: Icons.table_chart_rounded,
-        iconColor: const Color(0xFF8B5CF6),
-        bgColor: const Color(0xFFF5F3FF),
-      ),
-      _buildMetricCard(
-        title: 'Active Connection Host',
-        value: host.split(':')[0],
-        subtitle: 'Port: ${host.contains(':') ? host.split(':')[1] : '5432'}',
-        icon: Icons.cloud_done_rounded,
-        iconColor: const Color(0xFFF59E0B),
-        bgColor: const Color(0xFFFFFBEB),
-      ),
-    ];
-
-    if (isWide) {
-      return Row(
-        children: cards.map((c) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: c))).toList(),
-      );
-    } else if (isTablet) {
-      return Column(
-        children: [
-          Row(children: [Expanded(child: cards[0]), const SizedBox(width: 12), Expanded(child: cards[1])]),
-          const SizedBox(height: 12),
-          Row(children: [Expanded(child: cards[2]), const SizedBox(width: 12), Expanded(child: cards[3])]),
-        ],
-      );
-    } else {
-      return Column(
-        children: cards.map((c) => Padding(padding: const EdgeInsets.only(bottom: 12), child: c)).toList(),
-      );
-    }
-  }
-
-  Widget _buildMetricCard({
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color iconColor,
-    required Color bgColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-              ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: iconColor, size: 18),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-              letterSpacing: -0.3,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTableInventoryCard() {
+  Widget _buildTableInventoryCard(BoxConstraints constraints, double padding, bool isNarrow) {
     final tables = _healthData?['tables'] as Map<String, dynamic>? ?? {};
 
     final tableMeta = [
-      {'key': 'users', 'name': 'Users & Auth', 'icon': Icons.people_outline},
-      {'key': 'rider_profiles', 'name': 'Rider Profiles', 'icon': Icons.badge_outlined},
-      {'key': 'stores', 'name': 'Stores & Kitchens', 'icon': Icons.store_mall_directory_outlined},
-      {'key': 'menu_categories', 'name': 'Menu Categories', 'icon': Icons.category_outlined},
-      {'key': 'menu_items', 'name': 'Menu Catalog Items', 'icon': Icons.restaurant_menu_outlined},
-      {'key': 'orders', 'name': 'Customer Orders', 'icon': Icons.receipt_outlined},
-      {'key': 'order_items', 'name': 'Order Line Items', 'icon': Icons.list_alt_outlined},
-      {'key': 'deliveries', 'name': 'Active Deliveries', 'icon': Icons.local_shipping_outlined},
-      {'key': 'rider_locations', 'name': 'GPS Telemetry History', 'icon': Icons.location_on_outlined},
-      {'key': 'payments', 'name': 'Payment Ledger', 'icon': Icons.payments_outlined},
-      {'key': 'addresses', 'name': 'Customer Addresses', 'icon': Icons.place_outlined},
-      {'key': 'refresh_tokens', 'name': 'Active Sessions', 'icon': Icons.key_outlined},
-      {'key': 'outbox_events', 'name': 'WebSocket Outbox', 'icon': Icons.sync_alt_outlined},
-      {'key': 'audit_logs', 'name': 'System Audit Logs', 'icon': Icons.security_outlined},
-      {'key': 'idempotency_keys', 'name': 'API Idempotency Keys', 'icon': Icons.fingerprint_outlined},
-      {'key': 'device_tokens', 'name': 'Push Device Tokens', 'icon': Icons.notifications_none_outlined},
+      {'key': 'users', 'name': 'Users & Auth', 'desc': 'Admins, Riders, Customers'},
+      {'key': 'rider_profiles', 'name': 'Rider Profiles', 'desc': 'Vehicles, GPS, status'},
+      {'key': 'stores', 'name': 'Stores & Kitchens', 'desc': 'Partner restaurants'},
+      {'key': 'menu_categories', 'name': 'Menu Categories', 'desc': 'Catalog taxonomy'},
+      {'key': 'menu_items', 'name': 'Menu Catalog Items', 'desc': 'Foods, pricing & availability'},
+      {'key': 'orders', 'name': 'Customer Orders', 'desc': 'Active & completed orders'},
+      {'key': 'order_items', 'name': 'Order Line Items', 'desc': 'Items per transaction'},
+      {'key': 'deliveries', 'name': 'Active Deliveries', 'desc': 'Dispatch & fulfillment'},
+      {'key': 'rider_locations', 'name': 'GPS Route Telemetry', 'desc': 'Live coordinates & history'},
+      {'key': 'payments', 'name': 'Payment Ledger', 'desc': 'COD & online receipts'},
+      {'key': 'addresses', 'name': 'Saved Addresses', 'desc': 'Customer drop-off points'},
+      {'key': 'refresh_tokens', 'name': 'Active Sessions', 'desc': 'JWT refresh tokens'},
+      {'key': 'outbox_events', 'name': 'WebSocket Outbox', 'desc': 'Realtime broadcast events'},
+      {'key': 'audit_logs', 'name': 'Audit Logs', 'desc': 'Security & system history'},
+      {'key': 'idempotency_keys', 'name': 'Idempotency Keys', 'desc': 'Double-charge prevention'},
+      {'key': 'device_tokens', 'name': 'Push Device Tokens', 'desc': 'FCM / APNs notifications'},
     ];
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Supabase Schema Inventory',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${tableMeta.length} Tables Active',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Live record counts from Supabase PostgreSQL tables',
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-          ),
-          const Divider(height: 24),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 260,
-              mainAxisExtent: 64,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-            ),
-            itemCount: tableMeta.length,
-            itemBuilder: (ctx, idx) {
-              final item = tableMeta[idx];
-              final key = item['key'] as String;
-              final count = tables[key] ?? 0;
-
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.border.withOpacity(0.5)),
-                ),
-                child: Row(
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(item['icon'] as IconData, size: 18, color: const Color(0xFF10B981)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            item['name'] as String,
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            key,
-                            style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
-                          ),
-                        ],
-                      ),
+                    Text(
+                      'Supabase Schema Inventory',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.textPrimary),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Text(
-                        '$count',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.brandPrimary,
-                        ),
-                      ),
+                    Text(
+                      'Live record counts synchronized across all 16 PostgreSQL tables',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                     ),
                   ],
                 ),
-              );
-            },
-          ),
-        ],
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.brandPrimaryLight,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    '16 Tables Active',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.brandPrimary),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: isNarrow ? constraints.maxWidth - (padding * 2) - 40 : constraints.maxWidth - 440,
+                ),
+                child: DataTable(
+                  headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+                  columns: const [
+                    DataColumn(label: Text('Table Name', style: TextStyle(fontWeight: FontWeight.w800))),
+                    DataColumn(label: Text('Description', style: TextStyle(fontWeight: FontWeight.w800))),
+                    DataColumn(label: Text('Records', style: TextStyle(fontWeight: FontWeight.w800))),
+                    DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w800))),
+                  ],
+                  rows: tableMeta.map((item) {
+                    final key = item['key'] as String;
+                    final name = item['name'] as String;
+                    final desc = item['desc'] as String;
+                    final count = tables[key] ?? 0;
+
+                    return DataRow(cells: [
+                      DataCell(Row(
+                        children: [
+                          Icon(Icons.table_chart_outlined, size: 16, color: AppColors.brandPrimary),
+                          const SizedBox(width: 8),
+                          Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        ],
+                      )),
+                      DataCell(Text(desc, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary))),
+                      DataCell(Text(
+                        '$count',
+                        style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                      )),
+                      DataCell(
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: count > 0 ? AppColors.brandAccentLight : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            count > 0 ? 'Synchronized' : 'Ready',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: count > 0 ? AppColors.brandAccent : AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ]);
+                  }).toList(),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -535,80 +456,61 @@ class _AdminSupabaseHealthScreenState extends State<AdminSupabaseHealthScreen> {
 
     return Column(
       children: [
-        // Supabase Cloud Configuration
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border, width: 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Image.network(
-                    'https://supabase.com/favicon/favicon-32x32.png',
-                    width: 20,
-                    height: 20,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.cloud_queue, size: 20, color: Color(0xFF3ECF8E)),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Supabase Project Info',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+        // Supabase Project Info Card
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.cloud_queue_rounded, size: 20, color: AppColors.brandPrimary),
+                    SizedBox(width: 10),
+                    Text(
+                      'Supabase Project Info',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppColors.textPrimary),
                     ),
-                  ),
-                ],
-              ),
-              const Divider(height: 24),
-              _buildDetailRow('Project Ref', sup['project_ref'] ?? 'llumlzzczufzgjtvzhuc', canCopy: true),
-              _buildDetailRow('REST API', sup['auth_status'] ?? 'Active'),
-              _buildDetailRow('Storage Bucket', sup['storage_bucket'] ?? 'menu-images'),
-              _buildDetailRow('Storage Status', sup['storage_status'] ?? 'Ready'),
-              _buildDetailRow('Postgres DB', db['database_name'] ?? 'postgres'),
-            ],
+                  ],
+                ),
+                const Divider(height: 24),
+                _buildDetailRow('Project Ref', sup['project_ref'] ?? 'llumlzzczufzgjtvzhuc', canCopy: true),
+                _buildDetailRow('REST API Engine', sup['auth_status'] ?? 'Active'),
+                _buildDetailRow('Storage Bucket', sup['storage_bucket'] ?? 'menu-images'),
+                _buildDetailRow('Storage Status', sup['storage_status'] ?? 'Ready'),
+                _buildDetailRow('Target DB', db['database_name'] ?? 'postgres'),
+              ],
+            ),
           ),
         ),
 
         const SizedBox(height: 16),
 
-        // Connection Pool & Driver
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border, width: 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.tune_rounded, size: 20, color: AppColors.brandPrimary),
-                  SizedBox(width: 10),
-                  Text(
-                    'Engine & Pool Settings',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+        // Connection Pool Card
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.tune_rounded, size: 20, color: AppColors.brandAccent),
+                    SizedBox(width: 10),
+                    Text(
+                      'Engine & Pool Settings',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppColors.textPrimary),
                     ),
-                  ),
-                ],
-              ),
-              const Divider(height: 24),
-              _buildDetailRow('Dialect', pool['engine'] ?? 'postgresql'),
-              _buildDetailRow('DB Driver', pool['driver'] ?? 'psycopg2'),
-              _buildDetailRow('Pool Size', '${pool['pool_size'] ?? 10} connections'),
-              _buildDetailRow('Max Overflow', '+${pool['max_overflow'] ?? 20} burst'),
-              _buildDetailRow('Pool Pre-Ping', 'Enabled (Auto-reconnect)'),
-            ],
+                  ],
+                ),
+                const Divider(height: 24),
+                _buildDetailRow('Dialect', pool['engine'] ?? 'postgresql'),
+                _buildDetailRow('Driver', pool['driver'] ?? 'psycopg2'),
+                _buildDetailRow('Pool Size', '${pool['pool_size'] ?? 10} conns'),
+                _buildDetailRow('Max Overflow', '+${pool['max_overflow'] ?? 20} burst'),
+                _buildDetailRow('Pool Pre-Ping', 'Enabled'),
+              ],
+            ),
           ),
         ),
       ],
@@ -617,24 +519,17 @@ class _AdminSupabaseHealthScreenState extends State<AdminSupabaseHealthScreen> {
 
   Widget _buildDetailRow(String label, String value, {bool canCopy = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-          ),
+          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               SelectableText(
                 value,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
               ),
               if (canCopy) ...[
                 const SizedBox(width: 6),
@@ -656,34 +551,31 @@ class _AdminSupabaseHealthScreenState extends State<AdminSupabaseHealthScreen> {
   }
 
   Widget _buildErrorCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.red.shade200),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
-          const SizedBox(height: 12),
-          const Text(
-            'Could Not Fetch Health Metrics',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _errorMessage ?? 'Unknown error occurred.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: _fetchHealthData,
-            icon: const Icon(Icons.refresh, size: 18),
-            label: const Text('Try Again'),
-          ),
-        ],
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          children: [
+            const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
+            const SizedBox(height: 14),
+            const Text(
+              'Could Not Fetch Health Metrics',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage ?? 'Unknown connection error.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 18),
+            ElevatedButton.icon(
+              onPressed: _fetchHealthData,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Try Again'),
+            ),
+          ],
+        ),
       ),
     );
   }
