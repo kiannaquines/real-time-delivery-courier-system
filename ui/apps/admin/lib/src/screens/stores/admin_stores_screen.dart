@@ -200,76 +200,95 @@ class _AdminStoresScreenState extends State<AdminStoresScreen> {
         );
 
         final detailWidget = _selectedStoreDetail == null
-            ? const Center(child: Text('Select a store to view items'))
-            : Card(
+            ? const Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Wrap(
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(_selectedStoreDetail!.store.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                              Text(_selectedStoreDetail!.store.address, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                            ],
-                          ),
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.add, size: 16),
-                            label: const Text('Add Menu Item'),
-                            onPressed: () => _showAddMenuItemDialog(_selectedStoreDetail!.store),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 24),
-                      Text('Menu Items (${_selectedStoreDetail!.items.length})', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                      const SizedBox(height: 12),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(minWidth: isNarrow ? constraints.maxWidth - (padding * 2) : constraints.maxWidth - 380),
-                          child: DataTable(
-                            headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
-                            columns: const [
-                              DataColumn(label: Text('Item Name', style: TextStyle(fontWeight: FontWeight.w800))),
-                              DataColumn(label: Text('Description', style: TextStyle(fontWeight: FontWeight.w800))),
-                              DataColumn(label: Text('Price', style: TextStyle(fontWeight: FontWeight.w800))),
-                              DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w800))),
-                            ],
-                            rows: _selectedStoreDetail!.items.map((item) {
-                              return DataRow(cells: [
-                                DataCell(Text(item.name, style: const TextStyle(fontWeight: FontWeight.w700))),
-                                DataCell(SizedBox(width: 200, child: Text(item.description ?? '—', overflow: TextOverflow.ellipsis))),
-                                DataCell(Text(Formatters.currency(item.price), style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.brandPrimary))),
-                                DataCell(
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: item.isAvailable ? AppColors.brandAccentLight : const Color(0xFFF1F5F9),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      item.isAvailable ? 'Available' : 'Sold Out',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: item.isAvailable ? AppColors.brandAccent : AppColors.textSecondary,
+                  padding: EdgeInsets.all(40),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.storefront_outlined, size: 48, color: AppColors.textMuted),
+                        SizedBox(height: 12),
+                        Text(
+                          'Select a store to view menu items',
+                          style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            : SingleChildScrollView(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(_selectedStoreDetail!.store.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                                Text(_selectedStoreDetail!.store.address, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                              ],
+                            ),
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.add, size: 16),
+                              label: const Text('Add Menu Item'),
+                              onPressed: () => _showAddMenuItemDialog(_selectedStoreDetail!.store),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 24),
+                        Text('Menu Items (${_selectedStoreDetail!.items.length})', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                        const SizedBox(height: 12),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minWidth: isNarrow ? constraints.maxWidth - (padding * 2) : constraints.maxWidth - 400),
+                            child: DataTable(
+                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+                              columns: const [
+                                DataColumn(label: Text('Item Name', style: TextStyle(fontWeight: FontWeight.w800))),
+                                DataColumn(label: Text('Description', style: TextStyle(fontWeight: FontWeight.w800))),
+                                DataColumn(label: Text('Price', style: TextStyle(fontWeight: FontWeight.w800))),
+                                DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w800))),
+                              ],
+                              rows: _selectedStoreDetail!.items.map((item) {
+                                return DataRow(cells: [
+                                  DataCell(Text(item.name, style: const TextStyle(fontWeight: FontWeight.w700))),
+                                  DataCell(SizedBox(width: 220, child: Text(item.description ?? '—', overflow: TextOverflow.ellipsis))),
+                                  DataCell(Text(Formatters.currency(item.price), style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.brandPrimary))),
+                                  DataCell(
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: item.isAvailable ? AppColors.brandAccentLight : const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        item.isAvailable ? 'Available' : 'Sold Out',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: item.isAvailable ? AppColors.brandAccent : AppColors.textSecondary,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ]);
-                            }).toList(),
+                                ]);
+                              }).toList(),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
