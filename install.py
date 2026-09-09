@@ -74,12 +74,13 @@ def run_cmd(cmd, cwd=None, env=None, check=True, capture_output=False):
     if env:
         merged_env.update(env)
     
+    use_shell = isinstance(cmd, str) or IS_WINDOWS
     if capture_output:
         res = subprocess.run(
             cmd,
             cwd=cwd,
             env=merged_env,
-            shell=isinstance(cmd, str),
+            shell=use_shell,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
@@ -92,7 +93,7 @@ def run_cmd(cmd, cwd=None, env=None, check=True, capture_output=False):
             cmd,
             cwd=cwd,
             env=merged_env,
-            shell=isinstance(cmd, str)
+            shell=use_shell
         )
         if check and res.returncode != 0:
             raise subprocess.CalledProcessError(res.returncode, cmd)

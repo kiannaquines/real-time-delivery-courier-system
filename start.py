@@ -120,11 +120,11 @@ def main():
     print("Ensuring dependencies and database seed data...")
     subprocess.run([
         PYTHON_BIN, "-m", "pip", "install", "-r", os.path.join(PROJECT_ROOT, "backend", "requirements.txt"), "-q"
-    ], check=False)
+    ], check=False, shell=IS_WINDOWS)
     subprocess.run([
         PYTHON_BIN,
         os.path.join(PROJECT_ROOT, "backend", "app", "seed.py"),
-    ], check=True)
+    ], check=True, shell=IS_WINDOWS)
 
     processes = {}
 
@@ -156,6 +156,7 @@ def main():
             stdin=subprocess.PIPE if s["is_flutter"] else None,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            shell=IS_WINDOWS,
         )
         processes[s["name"]] = p
         t = threading.Thread(target=stream_logs, args=(p, s["name"]), daemon=True)
@@ -185,7 +186,7 @@ def main():
                         except Exception:
                             pass
             elif char == 'c':
-                os.system('clear')
+                os.system('cls' if IS_WINDOWS else 'clear')
             elif char == 'q':
                 shutdown()
     except (KeyboardInterrupt, EOFError):
