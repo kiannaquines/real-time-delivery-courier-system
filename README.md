@@ -129,6 +129,8 @@ flowchart TB
 ├── start.bat                 # Windows Command Prompt batch launcher
 ├── start.ps1                 # Windows PowerShell multi-app launcher
 ├── start.py                  # Cross-platform Python unified launcher
+├── build_apk.bat             # Windows Command Prompt Android APK builder
+├── build_apk.ps1             # Windows PowerShell Android APK builder
 └── README.md
 ```
 
@@ -385,6 +387,42 @@ python3 -m http.server 3000 --directory ui/apps/admin/build/web
 
 # Or using NGINX, Docker, or Cloudflare Pages
 ```
+
+---
+
+## 📱 Android APK Generation (Windows)
+
+Automated scripts are provided to compile release or debug APKs for the **Customer** and **Rider** applications.
+
+### Option A: Windows Command Prompt (`build_apk.bat`)
+Double-click `build_apk.bat` in File Explorer or run in CMD:
+```cmd
+# Interactive mode (interactive menu for app, mode, packaging, API URL):
+build_apk.bat
+
+# Direct CLI examples:
+build_apk.bat customer                          # Customer Release APK
+build_apk.bat rider                             # Rider Release APK
+build_apk.bat all                               # Both Customer & Rider APKs
+build_apk.bat customer debug                    # Customer Debug APK
+build_apk.bat customer release http://192.168.1.50:8000
+build_apk.bat all release --split-per-abi       # Split APKs per CPU architecture
+```
+
+### Option B: Windows PowerShell (`build_apk.ps1`)
+Run in Windows PowerShell:
+```powershell
+# Interactive mode:
+.\build_apk.ps1
+
+# Direct CLI examples:
+.\build_apk.ps1 -App customer
+.\build_apk.ps1 -App rider -Mode release
+.\build_apk.ps1 -App all -ApiUrl "http://192.168.1.50:8000" -OpenFolder
+.\build_apk.ps1 -App customer -SplitPerAbi
+```
+
+> **APK Output Location**: All compiled APKs are automatically gathered and exported with clean names to `build_output\apks\` (e.g., `customer-app-release.apk`, `rider-app-release.apk`).
 
 ---
 

@@ -64,6 +64,9 @@ htmlcov/
 .pub-cache/
 .pub/
 build/
+build_output/
+*.apk
+*.aab
 *.dill
 *.dill.track.dill
 .flutter-plugins
