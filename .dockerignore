@@ -1,0 +1,15 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+ui/
+build/
+build_output/
+*.apk
+*.aab
+*.db
+*.sqlite
+*.sqlite3
+*.log
