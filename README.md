@@ -392,37 +392,118 @@ python3 -m http.server 3000 --directory ui/apps/admin/build/web
 
 ## 📱 Android APK Generation (Windows)
 
-Automated scripts are provided to compile release or debug APKs for the **Customer** and **Rider** applications.
+Automated build scripts are provided for Windows to compile release or debug APKs for both the **Customer** and **Rider** Flutter applications.
 
-### Option A: Windows Command Prompt (`build_apk.bat`)
-Double-click `build_apk.bat` in File Explorer or run in CMD:
-```cmd
-# Interactive mode (interactive menu for app, mode, packaging, API URL):
-build_apk.bat
-
-# Direct CLI examples:
-build_apk.bat customer                          # Customer Release APK
-build_apk.bat rider                             # Rider Release APK
-build_apk.bat all                               # Both Customer & Rider APKs
-build_apk.bat customer debug                    # Customer Debug APK
-build_apk.bat customer release http://192.168.1.50:8000
-build_apk.bat all release --split-per-abi       # Split APKs per CPU architecture
+By default, the scripts are pre-configured to target the live Render staging backend:
+```
+https://real-time-delivery-courier-system.onrender.com
 ```
 
+### 📋 Prerequisites on Windows
+Before building APKs, ensure the following are installed:
+1. **Flutter SDK** (`>= 3.20.0`): Run `flutter doctor` in terminal to verify.
+2. **Android SDK & Command-line Tools**: Installed via Android Studio.
+3. **Android Licenses Accepted**: Run `flutter doctor --android-licenses` and accept all prompts (`y`).
+4. **Java JDK 17**: Ensure `JAVA_HOME` environment variable is set to JDK 17.
+
+---
+
+### Option A: Windows Command Prompt (`build_apk.bat`)
+
+#### 1. Interactive Wizard (Recommended)
+Simply **double-click** `build_apk.bat` in Windows File Explorer, or run in Command Prompt:
+```cmd
+build_apk.bat
+```
+The wizard guides you through:
+- **Target Application**: Customer App, Rider App, or Both.
+- **Build Mode**: Release (optimized production build) or Debug (faster dev build).
+- **Packaging Format**: Universal Fat APK (single file for any phone) or Split APKs (`--split-per-abi`).
+- **Backend API URL**: Defaults to the live Render staging URL (`https://real-time-delivery-courier-system.onrender.com`). Press Enter to keep or type a custom IP.
+
+#### 2. Direct Command-Line Execution
+```cmd
+:: Build Customer Release APK (targets live staging API)
+build_apk.bat customer
+
+:: Build Rider Release APK
+build_apk.bat rider
+
+:: Build both Customer and Rider APKs in one command
+build_apk.bat all
+
+:: Build Customer Debug APK
+build_apk.bat customer debug
+
+:: Build with a custom local IP (for testing against a local backend on your Wi-Fi)
+build_apk.bat customer release http://192.168.1.50:8000
+
+:: Build split architecture APKs (smaller individual download sizes)
+build_apk.bat all release --split-per-abi
+```
+
+---
+
 ### Option B: Windows PowerShell (`build_apk.ps1`)
-Run in Windows PowerShell:
+
+Run directly in PowerShell or Windows Terminal:
 ```powershell
-# Interactive mode:
+# Interactive wizard:
 .\build_apk.ps1
 
-# Direct CLI examples:
+# Direct CLI parameters:
 .\build_apk.ps1 -App customer
 .\build_apk.ps1 -App rider -Mode release
-.\build_apk.ps1 -App all -ApiUrl "http://192.168.1.50:8000" -OpenFolder
+.\build_apk.ps1 -App all -OpenFolder
+.\build_apk.ps1 -App customer -ApiUrl "https://real-time-delivery-courier-system.onrender.com"
 .\build_apk.ps1 -App customer -SplitPerAbi
 ```
 
-> **APK Output Location**: All compiled APKs are automatically gathered and exported with clean names to `build_output\apks\` (e.g., `customer-app-release.apk`, `rider-app-release.apk`).
+---
+
+### 📦 Output Location & Naming
+All compiled APKs are automatically gathered and exported with clean filenames to the project root directory:
+```
+build_output\apks\
+├── customer-app-release.apk       # Universal APK for Customer app
+└── rider-app-release.apk          # Universal APK for Rider app
+```
+*(If `--split-per-abi` is selected, separate APKs are produced for `arm64-v8a`, `armeabi-v7a`, and `x86_64`.)*
+
+At the end of the build, the script displays the file sizes and offers to open `build_output\apks\` in Windows File Explorer automatically.
+
+---
+
+### 📲 Installing the APK on an Android Device
+1. **Via Direct File Transfer (Easiest)**:
+   - Copy `customer-app-release.apk` or `rider-app-release.apk` to your phone via USB cable, Google Drive, or messaging apps.
+   - On your phone, tap the `.apk` file to install (allow "Install unknown apps" if prompted).
+2. **Via ADB (Android Debug Bridge)**:
+   - Enable **USB Debugging** on your phone (under *Developer options*).
+   - Connect phone via USB and run in CMD:
+     ```cmd
+     adb install build_output\apks\customer-app-release.apk
+     adb install build_output\apks\rider-app-release.apk
+     ```
+
+---
+
+### 🛠️ Troubleshooting APK Builds
+- **License Error**: If you see `Android license status unknown`, run:
+  ```cmd
+  flutter doctor --android-licenses
+  ```
+- **Java Version Incompatibility**: Flutter Android builds require JDK 17. Verify your version:
+  ```cmd
+  java -version
+  ```
+  If using JDK 21+ or JDK 8, install Microsoft OpenJDK 17 or Temurin JDK 17 and update `JAVA_HOME`.
+- **Clean Gradle Cache**: If a previous build was interrupted:
+  ```cmd
+  cd ui\apps\customer
+  flutter clean
+  flutter pub get
+  ```
 
 ---
 
