@@ -21,10 +21,27 @@ from app.api.v1 import (
 )
 
 
+import time
+import logging
+
+logger = logging.getLogger("uvicorn.error")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure tables exist in development / SQLite mode
-    Base.metadata.create_all(bind=engine)
+    # Ensure tables exist with connection retry support
+    max_retries = 5
+    for attempt in range(1, max_retries + 1):
+        try:
+            Base.metadata.create_all(bind=engine)
+            logger.info("[DATABASE] Database tables verified successfully.")
+            break
+        except Exception as exc:
+            logger.warning(f"[DATABASE] Connection attempt {attempt}/{max_retries} failed: {exc}")
+            if attempt < max_retries:
+                time.sleep(2)
+            else:
+                logger.error("[DATABASE] Could not initialize database after retries. Continuing to allow health checks.")
     yield
 
 
