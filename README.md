@@ -432,36 +432,91 @@ python3 -m http.server 3000 --directory ui/apps/admin/build/web
 
 ## 📱 Android APK Generation (Windows)
 
-Automated build scripts are provided for Windows to compile release or debug APKs for both the **Customer** and **Rider** Flutter applications.
-
-By default, the scripts are pre-configured to target the live Render staging backend:
-```
-https://real-time-delivery-courier-system.onrender.com
-```
-
-### 📋 Prerequisites on Windows
-Before building APKs, ensure the following are installed:
-1. **Flutter SDK** (`>= 3.20.0`): Run `flutter doctor` in terminal to verify.
-2. **Android SDK & Command-line Tools**: Installed via Android Studio.
-3. **Android Licenses Accepted**: Run `flutter doctor --android-licenses` and accept all prompts (`y`).
-4. **Java JDK 17**: Ensure `JAVA_HOME` environment variable is set to JDK 17.
+> 💡 **For Complete Beginners:** You do **not** need to type complicated terminal commands! We built an automated 1-click builder (`build_apk.bat`) that does all the work for you.
 
 ---
 
-### Option A: Windows Command Prompt (`build_apk.bat`)
+### 🟢 Easy 3-Step Guide to Build Your Android App
 
-#### 1. Interactive Wizard (Recommended)
-Simply **double-click** `build_apk.bat` in Windows File Explorer, or run in Command Prompt:
-```cmd
+#### 1️⃣ Step 1: Double-Click the Builder
+In the project folder on your Windows computer, simply **double-click**:
+```
 build_apk.bat
 ```
-The wizard guides you through:
-- **Target Application**: Customer App, Rider App, or Both.
-- **Build Mode**: Release (optimized production build) or Debug (faster dev build).
-- **Packaging Format**: Universal Fat APK (single file for any phone) or Split APKs (`--split-per-abi`).
-- **Backend API URL**: Defaults to the live Render staging URL (`https://real-time-delivery-courier-system.onrender.com`). Press Enter to keep or type a custom IP.
+*(A window will open with a clean, numbered menu).*
 
-#### 2. Direct Command-Line Execution
+---
+
+#### 2️⃣ Step 2: Choose Which App You Want
+Type a number and press **Enter**:
+- Press **`1`** for the 🛍️ **Customer App** *(for placing food & delivery orders)*
+- Press **`2`** for the 🛵 **Rider App** *(for delivery riders accepting orders)*
+- Press **`3`** to build **Both Apps**
+
+> 🎯 **Tip:** After typing `1`, `2`, or `3`, simply press **Enter** to accept the defaults! The builder automatically chooses the best settings and connects to the live online staging server:
+> ```
+> https://real-time-delivery-courier-system.onrender.com
+> ```
+
+---
+
+#### 3️⃣ Step 3: Get Your Ready-to-Use APK File
+When the build is done, your Android app files will be saved in:
+```
+build_output\apks\
+```
+*(The script will even ask if you want to open this folder in File Explorer automatically!)*
+
+| Application | Android Home Screen Name | Icon | What is it for? | Generated File |
+| :--- | :--- | :---: | :--- | :--- |
+| **Customer App** | `M&S Delivery Customer` | 🛍️ | Ordering food, COD checkout, tracking rider | `customer-app-release.apk` |
+| **Rider App** | `M&S Express Courier` | 🛵 | Accepting jobs, GPS tracking, completing deliveries | `rider-app-release.apk` |
+
+---
+
+### 📲 How to Install the App on Your Phone (3 Simple Steps)
+
+1. **Send the APK to your Android phone**:
+   - Plug your phone into your computer via USB and copy the `.apk` file over, **OR**
+   - Upload it to **Google Drive**, or send it to yourself on **Telegram** or **WhatsApp**.
+2. **Open the file on your phone**:
+   - Open your phone's **Files** or **Downloads** app and tap on the `.apk` file.
+3. **Tap Install**:
+   - If your phone displays *"For your security, your phone is not allowed to install unknown apps"*, simply tap **Settings** $\rightarrow$ switch on **Allow from this source** $\rightarrow$ tap **Install**.
+   - 🎉 **Done!** The app icon will appear right on your home screen.
+
+---
+
+<details>
+<summary><b>🛠️ First-Time Setup & Troubleshooting (Click here if a build fails)</b></summary>
+
+### System Requirements for Windows
+Before building for the very first time, make sure your computer has:
+1. **Flutter SDK**: Run `flutter doctor` in Command Prompt to verify.
+2. **Android Studio**: Installed with Android SDK Command-line Tools.
+3. **Android Licenses Accepted**: In Command Prompt, run:
+   ```cmd
+   flutter doctor --android-licenses
+   ```
+   *(Press `y` to accept all prompts).*
+4. **Java JDK 17**: Ensure `JAVA_HOME` environment variable is set to JDK 17.
+
+### Common Solutions
+- **Error: `Android license status unknown`**: Run `flutter doctor --android-licenses` and accept prompts.
+- **Java Incompatibility**: Flutter Android builds require JDK 17 (`java -version`).
+- **Clean Gradle Cache**: If a previous build was interrupted:
+  ```cmd
+  cd ui\apps\customer
+  flutter clean
+  flutter pub get
+  ```
+</details>
+
+<details>
+<summary><b>💻 Advanced Options & Command-Line Flags (Click to view)</b></summary>
+
+### Command Prompt Shortcuts
+Instead of using the interactive menu, you can pass parameters directly:
 ```cmd
 :: Build Customer Release APK (targets live staging API)
 build_apk.bat customer
@@ -469,24 +524,20 @@ build_apk.bat customer
 :: Build Rider Release APK
 build_apk.bat rider
 
-:: Build both Customer and Rider APKs in one command
+:: Build both Customer and Rider in one command
 build_apk.bat all
 
 :: Build Customer Debug APK
 build_apk.bat customer debug
 
-:: Build with a custom local IP (for testing against a local backend on your Wi-Fi)
+:: Build with a custom local IP (for testing on local Wi-Fi)
 build_apk.bat customer release http://192.168.1.50:8000
 
 :: Build split architecture APKs (smaller individual download sizes)
 build_apk.bat all release --split-per-abi
 ```
 
----
-
-### Option B: Windows PowerShell (`build_apk.ps1`)
-
-Run directly in PowerShell or Windows Terminal:
+### Windows PowerShell (`build_apk.ps1`)
 ```powershell
 # Interactive wizard:
 .\build_apk.ps1
@@ -499,57 +550,13 @@ Run directly in PowerShell or Windows Terminal:
 .\build_apk.ps1 -App customer -SplitPerAbi
 ```
 
----
-
-### 📦 Output Location & Naming
-
-| Application | Android Home Screen Name | Icon Symbol | Package ID | Generated APK Filename |
-| :--- | :--- | :--- | :--- | :--- |
-| **Customer App** | `M&S Delivery Customer` | 🛍️ Delivery Dining | `com.mns.customer.customer_app` | `customer-app-release.apk` |
-| **Rider App** | `M&S Express Courier` | 🛵 Motorcycle Courier | `com.mns.rider.rider_app` | `rider-app-release.apk` |
-
-All compiled APKs are automatically gathered and exported with clean filenames to the project root directory:
+### Install via USB using ADB (Developer Mode)
+If you have **USB Debugging** enabled on your phone and Android platform-tools installed:
+```cmd
+adb install build_output\apks\customer-app-release.apk
+adb install build_output\apks\rider-app-release.apk
 ```
-build_output\apks\
-├── customer-app-release.apk       # Universal APK for Customer app
-└── rider-app-release.apk          # Universal APK for Rider app
-```
-*(If `--split-per-abi` is selected, separate APKs are produced for `arm64-v8a`, `armeabi-v7a`, and `x86_64`.)*
-
-At the end of the build, the script displays the file sizes and offers to open `build_output\apks\` in Windows File Explorer automatically.
-
----
-
-### 📲 Installing the APK on an Android Device
-1. **Via Direct File Transfer (Easiest)**:
-   - Copy `customer-app-release.apk` or `rider-app-release.apk` to your phone via USB cable, Google Drive, or messaging apps.
-   - On your phone, tap the `.apk` file to install (allow "Install unknown apps" if prompted).
-2. **Via ADB (Android Debug Bridge)**:
-   - Enable **USB Debugging** on your phone (under *Developer options*).
-   - Connect phone via USB and run in CMD:
-     ```cmd
-     adb install build_output\apks\customer-app-release.apk
-     adb install build_output\apks\rider-app-release.apk
-     ```
-
----
-
-### 🛠️ Troubleshooting APK Builds
-- **License Error**: If you see `Android license status unknown`, run:
-  ```cmd
-  flutter doctor --android-licenses
-  ```
-- **Java Version Incompatibility**: Flutter Android builds require JDK 17. Verify your version:
-  ```cmd
-  java -version
-  ```
-  If using JDK 21+ or JDK 8, install Microsoft OpenJDK 17 or Temurin JDK 17 and update `JAVA_HOME`.
-- **Clean Gradle Cache**: If a previous build was interrupted:
-  ```cmd
-  cd ui\apps\customer
-  flutter clean
-  flutter pub get
-  ```
+</details>
 
 ---
 
