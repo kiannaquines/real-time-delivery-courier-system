@@ -15,7 +15,9 @@ A modern, full-stack real-time food delivery and courier dispatch platform tailo
   - [1. Backend & Database Setup](#1-backend--database-setup)
   - [2. Starting Cloudflare Tunnels](#2-starting-cloudflare-tunnels)
   - [3. Running Flutter Applications](#3-running-flutter-applications)
+- [Application Names, Icons & Metadata](#-application-names-icons--metadata)
 - [Production Web Build & Deployment](#-production-web-build--deployment)
+- [Android APK Generation (Windows)](#-android-apk-generation-windows)
 - [WebSocket & Real-Time Telemetry](#-websocket--real-time-telemetry)
 - [Troubleshooting & FAQs](#-troubleshooting--faqs)
 
@@ -369,6 +371,44 @@ flutter run -d web-server --web-port=3002 --web-hostname=0.0.0.0 \
 
 ---
 
+## 📱 Application Names, Icons & Metadata
+
+The platform consists of three distinct multi-platform client applications:
+
+| Application | Android / Web Display Name | Package / Application ID | Launcher / Brand Icon | Primary Target | Output Artifact |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **🛍️ Customer App** | `M&S Delivery Customer` | `com.mns.customer.customer_app` | 🛍️ Delivery Dining (`Icons.delivery_dining_rounded` on Primary Orange Gradient) | Android APK, iOS, Web | `build_output\apks\customer-app-release.apk` |
+| **🛵 Rider App** | `M&S Express Courier` | `com.mns.rider.rider_app` | 🛵 Motorcycle Courier (`Icons.two_wheeler_rounded` on Primary Orange Gradient) | Android APK, iOS, Web | `build_output\apks\rider-app-release.apk` |
+| **💻 Admin Portal** | `M&S Delivery Operations Console` | `admin_web_app` | 💻 Operations Shield (`Icons.admin_panel_settings_rounded` on Dark Slate) | Web Dashboard (Desktop/Tablet) | `ui/apps/admin/build/web/` |
+
+### Application Icon & Identity Details
+
+1. **🛍️ Customer App (`M&S Delivery Customer`)**:
+   - **Android Launcher Name**: `M&S Delivery Customer`
+   - **Internal Application ID**: `com.mns.customer.customer_app`
+   - **Launcher Icon**: `@mipmap/ic_launcher` (Branded food delivery dining badge)
+   - **UI Brand Symbol**: `Icons.delivery_dining_rounded` (Orange-to-coral radial gradient)
+   - **Accent Colors**: Vivid Delivery Orange (`#FF5722`), Soft Slate (`#F8FAFC`)
+   - **Purpose**: Food and grocery catalog browsing, cart, order placement, COD checkout, and real-time live map tracking.
+
+2. **🛵 Rider App (`M&S Express Courier`)**:
+   - **Android Launcher Name**: `M&S Express Courier`
+   - **Internal Application ID**: `com.mns.rider.rider_app`
+   - **Launcher Icon**: `@mipmap/ic_launcher` (Branded two-wheeler courier badge)
+   - **UI Brand Symbol**: `Icons.two_wheeler_rounded` (High-visibility delivery rider insignia)
+   - **Accent Colors**: High-Visibility Orange (`#FF5722`), Amber Yellow (`#F59E0B`), Deep Night (`#0F172A`)
+   - **Purpose**: Real-time GPS background telemetry sharing, on-duty shift toggle, order pickup checklists, and delivery completion.
+
+3. **💻 Admin Portal (`M&S Delivery Operations Console`)**:
+   - **Web App Title**: `M&S Delivery | Operations & Dispatch Console`
+   - **PWA / Browser Short Name**: `M&S Admin` (`web/manifest.json`)
+   - **Favicon & Web Icon**: `web/favicon.png` and PWA web icons
+   - **UI Brand Symbol**: `Icons.admin_panel_settings_rounded` (Dark operations cockpit badge)
+   - **Accent Colors**: Dark Modern Charcoal (`#121417`), Neon Brand Orange (`#FF5722`), Emerald Green (`#10B981`)
+   - **Purpose**: Live fleet radar map, order dispatching, store catalog management, sales audit reporting, and rider management.
+
+---
+
 ## 📦 Production Web Build & Deployment
 
 To build a standalone, optimized production bundle for the Admin Portal:
@@ -462,6 +502,12 @@ Run directly in PowerShell or Windows Terminal:
 ---
 
 ### 📦 Output Location & Naming
+
+| Application | Android Home Screen Name | Icon Symbol | Package ID | Generated APK Filename |
+| :--- | :--- | :--- | :--- | :--- |
+| **Customer App** | `M&S Delivery Customer` | 🛍️ Delivery Dining | `com.mns.customer.customer_app` | `customer-app-release.apk` |
+| **Rider App** | `M&S Express Courier` | 🛵 Motorcycle Courier | `com.mns.rider.rider_app` | `rider-app-release.apk` |
+
 All compiled APKs are automatically gathered and exported with clean filenames to the project root directory:
 ```
 build_output\apks\
