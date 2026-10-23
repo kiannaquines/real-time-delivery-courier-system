@@ -9,7 +9,7 @@ build/
 build_output/
 *.apk
 *.aab
-*.db
-*.sqlite
-*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
 *.log
