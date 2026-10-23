@@ -1,0 +1,460 @@
+# 🛠️ M&S Delivery Express — Complete Setup & Architecture Guide
+
+This document contains the comprehensive technical documentation, full architecture diagrams, manual execution commands, database migration procedures, and in-depth troubleshooting for the **M&S Delivery Express Kabacan** platform.
+
+> 💡 **Looking for a quick start or the 1-click Android APK builder?** See the main [README.md](README.md).
+
+---
+
+## 📑 Table of Contents
+- [Architecture Overview & System Layers](#-architecture-overview--system-layers)
+- [Project Structure](#-project-structure)
+- [System Prerequisites](#-system-prerequisites)
+- [Automated Installation (First-Time Setup)](#-automated-installation-first-time-setup)
+- [Unified Launchers & Runtime Architecture](#-unified-launchers--runtime-architecture)
+- [How Cloudflare Tunnels Work](#-how-cloudflare-tunnels-work)
+- [Supabase PostgreSQL Migration](#-supabase-postgresql-migration)
+- [Manual Step-by-Step Execution Guide](#-manual-step-by-step-execution-guide)
+  - [1. Backend & SQLite Database](#1-backend--sqlite-database)
+  - [2. Cloudflare Tunnels](#2-cloudflare-tunnels)
+  - [3. Running Flutter Client Apps](#3-running-flutter-client-apps)
+- [Production Web Build & Deployment](#-production-web-build--deployment)
+- [Advanced Android APK Build Commands](#-advanced-android-apk-build-commands)
+- [WebSocket & Real-Time Telemetry Specification](#-websocket--real-time-telemetry-specification)
+- [In-Depth Troubleshooting & FAQs](#-in-depth-troubleshooting--faqs)
+
+---
+
+## 🏛 Architecture Overview & System Layers
+
+```mermaid
+flowchart TB
+    subgraph Clients["📱 Client Applications (Flutter Multi-Platform)"]
+        ADMIN["💻 Admin Portal<br/>(Flutter Web • Port 3000)"]
+        CUSTOMER["🛍️ Customer App<br/>(iOS Simulator / Android / Web • Port 3001)"]
+        RIDER["🛵 Rider App<br/>(iOS Simulator / Android / Web • Port 3002)"]
+    end
+
+    subgraph SharedPackages["📦 Shared Flutter Packages (Dart)"]
+        DOMAIN["domain_models<br/>(Entities, Enums, Formatters)"]
+        APICLIENT["api_client<br/>(HTTP REST Client & WebSockets)"]
+        AUTHSESSION["auth_session<br/>(JWT Token & Session Storage)"]
+        DESIGNSYSTEM["design_system<br/>(Theme, Colors, Shared UI Widgets)"]
+    end
+
+    subgraph CloudflareEdge["🌐 Cloudflare Global Edge Network"]
+        CF_ADMIN["Admin Tunnel<br/>https://*.trycloudflare.com"]
+        CF_API["Backend API & WS Tunnel<br/>https://*.trycloudflare.com"]
+    end
+
+    subgraph BackendCore["⚡ FastAPI Backend Engine (Port 8000)"]
+        AUTH_ROUTER["Auth & Security Router (JWT)"]
+        DISPATCH_ENGINE["Orders & Dispatch Engine"]
+        WS_HUB["WebSocket Telemetry & Live Tracking Hub"]
+        ROUTING["Kabacan Geospatial & ETA Calculator"]
+    end
+
+    subgraph StorageLayer["💾 Persistence Layer"]
+        DB[("SQLite / PostgreSQL Database<br/>(SQLAlchemy ORM)")]
+    end
+
+    %% External Connections through Cloudflare
+    CF_ADMIN -->|Host: 0.0.0.0:3000| ADMIN
+    ADMIN -->|REST & WebSockets| CF_API
+    CUSTOMER -->|REST & Order Tracking WS| CF_API
+    RIDER -->|REST & GPS Telemetry WS| CF_API
+
+    CF_API --> AUTH_ROUTER
+    CF_API --> DISPATCH_ENGINE
+    CF_API --> WS_HUB
+
+    %% Client Package Dependencies
+    ADMIN -.-> SharedPackages
+    CUSTOMER -.-> SharedPackages
+    RIDER -.-> SharedPackages
+
+    %% Backend Internals
+    AUTH_ROUTER --> DB
+    DISPATCH_ENGINE --> DB
+    DISPATCH_ENGINE --> ROUTING
+    DISPATCH_ENGINE -.->|Broadcast Status| WS_HUB
+    WS_HUB -.->|Real-Time Broadcast| CUSTOMER
+    WS_HUB -.->|Live Fleet Update| ADMIN
+```
+
+### System Architecture Layers
+
+1. **Client Applications Layer (`ui/apps/`)**:
+   - **Admin Portal (`admin/`)**: Web-first operations cockpit featuring interactive live radar map (Mapbox GL / OpenStreetMap), rider assignment, store & menu catalog management, sales analytics (COD remittance), and audit log trail.
+   - **Customer Mobile App (`customer/`)**: Food discovery, cart management with fixed Kabacan delivery rate, cash on delivery (COD) checkout, live GPS delivery tracking with polyline route, and address book with local landmarks.
+   - **Rider Mobile App (`rider/`)**: On-duty GPS telemetry sharing engine, active delivery mission checklist (Store Pickup $\rightarrow$ Heading to Customer $\rightarrow$ Delivery Completed & COD Collection), and earnings history.
+
+2. **Shared Package Foundation (`ui/packages/`)**:
+   - **`domain_models`**: Pure Dart single-source-of-truth domain models (`Order`, `Store`, `MenuItem`, `RiderProfile`, `Address`) and status enums (`OrderStatus`, `RiderStatus`, `PaymentStatus`).
+   - **`api_client`**: Unified REST HTTP client and real-time WebSocket client with automatic JWT token injection and error handling.
+   - **`auth_session`**: Cross-platform authentication manager supporting secure browser and device session persistence.
+   - **`design_system`**: Standardized modern design system (vibrant branding, dark/light surface tokens, custom badges, dialogs, and formatters).
+
+3. **Global Edge & Tunneling Layer (Cloudflare)**:
+   - **Zero-Config Public HTTPS / WSS**: Exposes local FastAPI backend and Flutter web services to the internet through secure encrypted tunnels with zero port-forwarding or public IP requirements.
+   - **Host-Header Translation**: Automatic host-header rewriting (`--http-host-header 0.0.0.0:3000`) for seamless Flutter web server integration.
+
+4. **FastAPI Backend Services (`backend/`)**:
+   - **REST API Routers (`/api/v1/`)**: Modular endpoints for authentication, orders, riders, stores, categories, reports, and administrative audit logs.
+   - **Real-Time WebSocket Hub (`/api/v1/ws/`)**: Broadcasts order status state transitions and streams real-time rider latitude/longitude coordinates to tracking customers and admin radar.
+   - **Geospatial & Seed Engine**: Built-in coordinates and street presets for Kabacan, Cotabato (Poblacion, USM Campus, Osias, Kayaga, Bannawag) with automated seed migration.
+
+---
+
+## 📂 Project Structure
+
+```text
+.
+├── backend/                  # FastAPI backend server
+│   ├── app/
+│   │   ├── api/v1/          # REST endpoints (auth, orders, riders, stores, etc.)
+│   │   ├── core/            # Config, security, database engine
+│   │   ├── models/          # SQLAlchemy database models
+│   │   ├── schemas/         # Pydantic validation schemas
+│   │   ├── websocket/       # Real-time WebSocket connection manager
+│   │   └── seed.py          # Database seeder (Kabacan stores, riders, users)
+│   ├── Dockerfile           # Backend container image
+│   └── requirements.txt
+├── ui/
+│   ├── apps/
+│   │   ├── admin/           # Admin Web Application (Flutter Web)
+│   │   ├── customer/        # Customer Application (iOS / Android / Web)
+│   │   └── rider/           # Rider Application (iOS / Android / Web)
+│   └── packages/
+│       ├── api_client/      # Unified REST & WebSocket API client
+│       ├── auth_session/    # JWT token storage & session manager
+│       ├── design_system/   # Shared UI components, colors, and typography
+│       └── domain_models/   # Shared domain entities & enums
+├── build_output/             # Built Android APK binaries and web outputs
+│   └── apks/                # customer-app-release.apk, rider-app-release.apk
+├── build_apk.bat             # 1-click Windows Android APK builder
+├── build_apk.ps1             # PowerShell companion APK builder
+├── install.sh / install.bat  # Automated environment installer
+├── start.sh / start.bat      # Automated multi-service runtime launcher
+├── migrate_to_supabase.py    # One-click SQLite to Supabase PostgreSQL migration
+└── README.md                 # Beginner-friendly project overview
+```
+
+---
+
+## ⚙️ System Prerequisites
+
+### macOS & Linux
+1. **Flutter SDK** (`>= 3.20.0`): `brew install --cask flutter` or from [flutter.dev](https://flutter.dev)
+2. **Python** (`>= 3.10`): `brew install python` or `sudo apt install python3 python3-pip python3-venv`
+3. **Cloudflare CLI**: `brew install cloudflared` or `sudo apt-get install cloudflared`
+4. **Xcode & Simulators** *(macOS only)*: `xcode-select --install`
+
+### Windows 10/11
+Install all requirements in one PowerShell command via `winget`:
+```powershell
+winget install -e --id Python.Python.3.11
+winget install -e --id Flutter.Flutter
+winget install -e --id Git.Git
+winget install -e --id Cloudflare.cloudflared
+```
+*Note: Restart your terminal after installing so PATH changes take effect.*
+
+---
+
+## 🛠️ Automated Installation (First-Time Setup)
+
+Before starting the system for the first time on a new computer, run the automated installation script. It creates the Python virtual environment, installs backend packages, seeds the database with test accounts and Kabacan stores, enables Flutter Web, and resolves dependencies across all 5 shared packages and 3 client apps:
+
+### macOS & Linux
+```bash
+./install.sh
+```
+*(Or manually run: `python3 install.py`)*
+
+### Windows (Command Prompt)
+Double-click `install.bat` or run:
+```cmd
+install.bat
+```
+
+### Windows (PowerShell)
+```powershell
+.\install.ps1
+```
+
+---
+
+## ⚡ Unified Launchers & Runtime Architecture
+
+To start all services simultaneously with live hot-reloading and automatic Cloudflare tunnels:
+
+### Options by Operating System:
+- **macOS / Linux**: `./start.sh`
+- **Windows (Command Prompt)**: Double-click `start.bat`
+- **Windows (PowerShell)**: `.\start.ps1`
+- **Cross-Platform Python**: `python start.py`
+
+### What the Launchers Do Automatically:
+1. **Frees all required ports** (`8000`, `3000`, `3001`, `3002`).
+2. **Creates Python virtual environment (`.venv`)** and installs `requirements.txt`.
+3. **Migrates and seeds the database** with Kabacan stores, menu items, sample orders, and accounts.
+4. **Starts the FastAPI Backend** on port `8000`.
+5. **Spawns Cloudflare Tunnels**:
+   - Public Backend API Tunnel (`https://<api-subdomain>.trycloudflare.com`)
+   - Public Admin Console Tunnel (`https://<admin-subdomain>.trycloudflare.com`)
+6. **Launches Flutter Applications**:
+   - On macOS: Boots dual iOS Simulators (iPhone 16 for Customer, iPhone 16 Pro for Rider) and Admin Web.
+   - On Windows/Linux: Launches Admin Web (`:3000`), Customer Web (`:3001`), and Rider Web (`:3002`).
+7. **Configures host header rewriting** (`--http-host-header 0.0.0.0:3000`) so Cloudflare web routing works seamlessly.
+
+### Interactive Controls (in terminal):
+| Key | Action |
+| :--- | :--- |
+| `r` | 🔥 **Hot Reload** all running Flutter applications simultaneously |
+| `R` | 🔄 **Hot Restart** all running Flutter applications |
+| `c` | 🧹 Clear terminal screen |
+| `q` | 🛑 Gracefully stop all apps and shut down Cloudflare tunnels |
+
+---
+
+## 🌐 How Cloudflare Tunnels Work
+
+Cloudflare Quick Tunnels (`trycloudflare.com`) expose your local servers securely to the internet without needing port forwarding, dynamic DNS, or public IP addresses.
+
+### 1. Backend API Tunnel
+```bash
+cloudflared tunnel --url http://127.0.0.1:8000
+```
+- Routes public HTTPS traffic to FastAPI.
+- Automatically handles SSL/TLS termination and WebSocket connections (`wss://.../ws/...`).
+
+### 2. Admin Console Web Tunnel
+```bash
+cloudflared tunnel --url http://127.0.0.1:3000 --http-host-header 0.0.0.0:3000
+```
+> [!IMPORTANT]
+> When tunneling Flutter Web (`web-server` or static server), `--http-host-header 0.0.0.0:3000` is required so that incoming requests match the local host header binding.
+
+---
+
+## 🗄️ Supabase PostgreSQL Migration
+
+The system supports both local SQLite and **Supabase PostgreSQL** with zero code changes. You can migrate all existing accounts, stores, menu items, orders, deliveries, and telemetry to Supabase in one command.
+
+### Step 1: Run the Supabase Migration Tool
+Run the migration script:
+```bash
+./migrate_to_supabase.py
+```
+Or specify your Supabase PostgreSQL connection string directly:
+```bash
+python migrate_to_supabase.py --target-url "postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres"
+```
+
+### What the Migration Tool Does Automatically:
+1. **Verifies Connectivity**: Tests the connection to your Supabase PostgreSQL cluster.
+2. **Initializes Schema & Tables**: Creates all tables, foreign keys, and indexes on Supabase.
+3. **Migrates All Records**: Transfers data from `mns_delivery.db` in topological FK order (`users`, `rider_profiles`, `addresses`, `stores`, `menu_categories`, `menu_items`, `orders`, `order_items`, `payments`, `deliveries`, `rider_locations`, `refresh_tokens`, `device_tokens`, `outbox_events`, `audit_logs`, `idempotency_keys`).
+4. **Data Integrity Audit**: Runs an automated table-by-table record count comparison between SQLite and Supabase.
+5. **Configures `.env`**: Automatically updates `DATABASE_URL` in your `.env` so the backend immediately connects to Supabase.
+
+---
+
+## 🛠 Manual Step-by-Step Execution Guide
+
+If you prefer to start components individually in separate terminal tabs:
+
+### 1. Backend & SQLite Database
+```bash
+# Set up Python virtual environment
+python3 -m venv .venv
+source .venv/bin/activate   # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r backend/requirements.txt
+
+# Run database migration & seed
+python backend/app/seed.py
+
+# Start FastAPI server
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --app-dir backend
+```
+- Local Swagger Docs: `http://localhost:8000/docs`
+
+---
+
+### 2. Cloudflare Tunnels
+
+In a new terminal, launch the Backend API Tunnel:
+```bash
+cloudflared tunnel --url http://127.0.0.1:8000
+```
+*Copy the generated URL (e.g., `https://example-api.trycloudflare.com`).*
+
+In another terminal, launch the Admin Console Tunnel:
+```bash
+cloudflared tunnel --url http://127.0.0.1:3000 --http-host-header 0.0.0.0:3000
+```
+*Copy the generated URL (e.g., `https://example-admin.trycloudflare.com`).*
+
+---
+
+### 3. Running Flutter Client Apps
+
+Export your Mapbox access token and public API URL:
+```bash
+export API_URL="https://example-api.trycloudflare.com"
+export MAPBOX_ACCESS_TOKEN="your_mapbox_access_token_here"
+```
+
+#### A. Run Admin Web App
+```bash
+cd ui/apps/admin
+flutter run -d web-server --web-port=3000 --web-hostname=0.0.0.0 \
+  --dart-define=API_BASE_URL=$API_URL \
+  --dart-define=MAPBOX_ACCESS_TOKEN=$MAPBOX_ACCESS_TOKEN
+```
+
+#### B. Run Customer App
+```bash
+cd ui/apps/customer
+# To run on iOS Simulator:
+flutter run -d "iPhone 16" \
+  --dart-define=API_BASE_URL=$API_URL \
+  --dart-define=MAPBOX_ACCESS_TOKEN=$MAPBOX_ACCESS_TOKEN
+
+# Or to run on Web:
+flutter run -d web-server --web-port=3001 --web-hostname=0.0.0.0 \
+  --dart-define=API_BASE_URL=$API_URL \
+  --dart-define=MAPBOX_ACCESS_TOKEN=$MAPBOX_ACCESS_TOKEN
+```
+
+#### C. Run Rider App
+```bash
+cd ui/apps/rider
+# To run on iOS Simulator:
+flutter run -d "iPhone 16 Pro" \
+  --dart-define=API_BASE_URL=$API_URL \
+  --dart-define=MAPBOX_ACCESS_TOKEN=$MAPBOX_ACCESS_TOKEN
+
+# Or to run on Web:
+flutter run -d web-server --web-port=3002 --web-hostname=0.0.0.0 \
+  --dart-define=API_BASE_URL=$API_URL \
+  --dart-define=MAPBOX_ACCESS_TOKEN=$MAPBOX_ACCESS_TOKEN
+```
+
+---
+
+## 📦 Production Web Build & Deployment
+
+To build a standalone, optimized production bundle for the Admin Portal:
+
+```bash
+cd ui/apps/admin
+flutter build web --release \
+  --dart-define=API_BASE_URL="https://real-time-delivery-courier-system.onrender.com" \
+  --dart-define=MAPBOX_ACCESS_TOKEN="your-mapbox-token"
+```
+
+Serve the output static files (`build/web/`) using any web server or container:
+```bash
+# Using Python static server:
+python3 -m http.server 3000 --directory ui/apps/admin/build/web
+
+# Or using NGINX, Docker, or Cloudflare Pages
+```
+
+---
+
+## 💻 Advanced Android APK Build Commands
+
+For developers wanting granular CLI control over the Windows APK generation:
+
+### Command Prompt Flags (`build_apk.bat`)
+```cmd
+:: Build Customer Release APK targeting live staging
+build_apk.bat customer
+
+:: Build Rider Release APK
+build_apk.bat rider
+
+:: Build both Customer and Rider in one command
+build_apk.bat all
+
+:: Build Customer Debug APK
+build_apk.bat customer debug
+
+:: Build with a custom local IP (for testing on local Wi-Fi)
+build_apk.bat customer release http://192.168.1.50:8000
+
+:: Build split architecture APKs (smaller individual download sizes)
+build_apk.bat all release --split-per-abi
+```
+
+### PowerShell Flags (`build_apk.ps1`)
+```powershell
+# Interactive wizard:
+.\build_apk.ps1
+
+# Direct CLI parameters:
+.\build_apk.ps1 -App customer
+.\build_apk.ps1 -App rider -Mode release
+.\build_apk.ps1 -App all -OpenFolder
+.\build_apk.ps1 -App customer -ApiUrl "https://real-time-delivery-courier-system.onrender.com"
+.\build_apk.ps1 -App customer -SplitPerAbi
+```
+
+### Install via USB using ADB
+```cmd
+adb install build_output\apks\customer-app-release.apk
+adb install build_output\apks\rider-app-release.apk
+```
+
+---
+
+## 📡 WebSocket & Real-Time Telemetry Specification
+
+The platform uses WebSockets for instant updates across apps:
+
+| Channel | Endpoint | Description |
+| :--- | :--- | :--- |
+| **Order Tracking** | `/api/v1/ws/orders/{order_id}` | Broadcasts order status changes (`pending` $\rightarrow$ `assigned` $\rightarrow$ `picked_up` $\rightarrow$ `on_the_way` $\rightarrow$ `delivered`) and live rider GPS coordinates to the Customer app. |
+| **Rider GPS Stream** | `/api/v1/ws/riders/{rider_id}/telemetry` | Ingests real-time latitude, longitude, heading, and speed from the Rider app. |
+| **Admin Dispatch Feed** | `/api/v1/ws/admin/dispatch` | Streams live order creations, assignment events, and live rider positions onto the Admin Live Map. |
+
+---
+
+## ❓ In-Depth Troubleshooting & FAQs
+
+### 1. `cloudflared` command not found
+Install the CLI via Homebrew (`brew install cloudflared`) or download it from the [Cloudflare Tunnel Documentation](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/).
+
+### 2. Port already in use (8000, 3000, 3001, 3002)
+Run `./start.sh` which automatically frees the ports, or manually kill them:
+```bash
+lsof -ti tcp:8000,3000,3001,3002 | xargs kill -9
+```
+
+### 3. iOS Simulator not launching
+Make sure Xcode is configured with command line tools:
+```bash
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -runFirstLaunch
+```
+
+### 4. WebSocket connection issues over Cloudflare
+Ensure the `API_BASE_URL` uses `https://`. The client automatically translates `https://` to `wss://` for WebSocket connections.
+
+### 5. Android License Error
+If you see `Android license status unknown` when building APKs:
+```cmd
+flutter doctor --android-licenses
+```
+
+### 6. Java Version Incompatibility
+Flutter Android builds require JDK 17. Verify your version:
+```cmd
+java -version
+```
+If using JDK 21+ or JDK 8, install Microsoft OpenJDK 17 or Eclipse Temurin JDK 17 and update `JAVA_HOME`.

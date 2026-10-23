@@ -1,597 +1,109 @@
-# 🚀 M&S Delivery Express Kabacan — Real-Time Delivery & Courier System
+# 🚀 M&S Delivery Express Kabacan
 
-A modern, full-stack real-time food delivery and courier dispatch platform tailored for Kabacan, Cotabato. Built with a high-performance **FastAPI** backend (WebSocket live telemetry) and a multi-platform **Flutter** ecosystem (**Admin Web Portal**, **Rider Mobile App**, and **Customer Mobile App**), powered by **Cloudflare Tunnels** for instant global HTTPS access without open ports or static IPs.
-
----
-
-## 📑 Table of Contents
-- [Architecture Overview](#-architecture-overview)
-- [Project Structure](#-project-structure)
-- [Prerequisites](#-prerequisites)
-- [Quick Start (One-Command Launcher)](#-quick-start-one-command-launcher)
-- [How Cloudflare Tunnels Work](#-how-cloudflare-tunnels-work)
-- [Default Test Credentials](#-default-test-credentials)
-- [Manual Execution Guide](#-manual-execution-guide)
-  - [1. Backend & Database Setup](#1-backend--database-setup)
-  - [2. Starting Cloudflare Tunnels](#2-starting-cloudflare-tunnels)
-  - [3. Running Flutter Applications](#3-running-flutter-applications)
-- [Application Names, Icons & Metadata](#-application-names-icons--metadata)
-- [Production Web Build & Deployment](#-production-web-build--deployment)
-- [Android APK Generation (Windows)](#-android-apk-generation-windows)
-- [WebSocket & Real-Time Telemetry](#-websocket--real-time-telemetry)
-- [Troubleshooting & FAQs](#-troubleshooting--faqs)
+> **Real-Time Food Delivery & Courier Dispatch Platform tailored for Kabacan, Cotabato.**  
+> Powered by a high-performance **FastAPI** backend and a multi-platform **Flutter** ecosystem (**Customer Mobile App**, **Rider Mobile App**, and **Admin Web Operations Console**).
 
 ---
 
-## 🏛 Architecture Overview
+## 🌐 Live Staging Backend
 
-```mermaid
-flowchart TB
-    subgraph Clients["📱 Client Applications (Flutter Multi-Platform)"]
-        ADMIN["💻 Admin Portal<br/>(Flutter Web • Port 3000)"]
-        CUSTOMER["🛍️ Customer App<br/>(iOS Simulator / Mobile / Web • Port 3001)"]
-        RIDER["🛵 Rider App<br/>(iOS Simulator / Mobile / Web • Port 3002)"]
-    end
+The staging environment is deployed and online with 24/7 uptime:
 
-    subgraph SharedPackages["📦 Shared Flutter Packages (Dart)"]
-        DOMAIN["domain_models<br/>(Entities, Enums, Formatters)"]
-        APICLIENT["api_client<br/>(HTTP REST Client & WebSockets)"]
-        AUTHSESSION["auth_session<br/>(JWT Token & Session Storage)"]
-        DESIGNSYSTEM["design_system<br/>(Theme, Colors, Shared UI Widgets)"]
-    end
-
-    subgraph CloudflareEdge["🌐 Cloudflare Global Edge Network"]
-        CF_ADMIN["Admin Tunnel<br/>https://*.trycloudflare.com"]
-        CF_API["Backend API & WS Tunnel<br/>https://*.trycloudflare.com"]
-    end
-
-    subgraph BackendCore["⚡ FastAPI Backend Engine (Port 8000)"]
-        AUTH_ROUTER["Auth & Security Router (JWT)"]
-        DISPATCH_ENGINE["Orders & Dispatch Engine"]
-        WS_HUB["WebSocket Telemetry & Live Tracking Hub"]
-        ROUTING["Kabacan Geospatial & ETA Calculator"]
-    end
-
-    subgraph StorageLayer["💾 Persistence Layer"]
-        DB[("SQLite / PostgreSQL Database<br/>(SQLAlchemy ORM)")]
-    end
-
-    %% External Connections through Cloudflare
-    CF_ADMIN -->|Host: 0.0.0.0:3000| ADMIN
-    ADMIN -->|REST & WebSockets| CF_API
-    CUSTOMER -->|REST & Order Tracking WS| CF_API
-    RIDER -->|REST & GPS Telemetry WS| CF_API
-
-    CF_API --> AUTH_ROUTER
-    CF_API --> DISPATCH_ENGINE
-    CF_API --> WS_HUB
-
-    %% Client Package Dependencies
-    ADMIN -.-> SharedPackages
-    CUSTOMER -.-> SharedPackages
-    RIDER -.-> SharedPackages
-
-    %% Backend Internals
-    AUTH_ROUTER --> DB
-    DISPATCH_ENGINE --> DB
-    DISPATCH_ENGINE --> ROUTING
-    DISPATCH_ENGINE -.->|Broadcast Status| WS_HUB
-    WS_HUB -.->|Real-Time Broadcast| CUSTOMER
-    WS_HUB -.->|Live Fleet Update| ADMIN
-```
-
-### System Architecture Layers
-
-1. **Client Applications Layer (`ui/apps/`)**:
-   - **Admin Portal (`admin/`)**: Web-first operations cockpit featuring interactive live radar map (Mapbox GL / OpenStreetMap), rider assignment, store & menu catalog management, sales analytics (COD remittance), and audit log trail.
-   - **Customer Mobile App (`customer/`)**: Food discovery, cart management with fixed Kabacan delivery rate, cash on delivery (COD) checkout, live GPS delivery tracking with polyline route, and address book with local landmarks.
-   - **Rider Mobile App (`rider/`)**: On-duty GPS telemetry sharing engine, active delivery mission checklist (Store Pickup $\rightarrow$ Heading to Customer $\rightarrow$ Delivery Completed & COD Collection), and earnings history.
-
-2. **Shared Package Foundation (`ui/packages/`)**:
-   - **`domain_models`**: Pure Dart single-source-of-truth domain models (`Order`, `Store`, `MenuItem`, `RiderProfile`, `Address`) and status enums (`OrderStatus`, `RiderStatus`, `PaymentStatus`).
-   - **`api_client`**: Unified REST HTTP client and real-time WebSocket client with automatic JWT token injection and error handling.
-   - **`auth_session`**: Cross-platform authentication manager supporting secure browser and device session persistence.
-   - **`design_system`**: Standardized modern design system (vibrant branding, dark/light surface tokens, custom badges, dialogs, and formatters).
-
-3. **Global Edge & Tunneling Layer (Cloudflare)**:
-   - **Zero-Config Public HTTPS / WSS**: Exposes local FastAPI backend and Flutter web services to the internet through secure encrypted tunnels with zero port-forwarding or public IP requirements.
-   - **Host-Header Translation**: Automatic host-header rewriting (`--http-host-header 0.0.0.0:3000`) for seamless Flutter web server integration.
-
-4. **FastAPI Backend Services (`backend/`)**:
-   - **REST API Routers (`/api/v1/`)**: Modular endpoints for authentication, orders, riders, stores, categories, reports, and administrative audit logs.
-   - **Real-Time WebSocket Hub (`/api/v1/ws/`)**: Broadcasts order status state transitions and streams real-time rider latitude/longitude coordinates to tracking customers and admin radar.
-   - **Geospatial & Seed Engine**: Built-in coordinates and street presets for Kabacan, Cotabato (Poblacion, USM Campus, Osias, Kayaga, Bannawag) with automated seed migration.
+| Resource | URL | Status |
+| :--- | :--- | :---: |
+| **Live API Server** | `https://real-time-delivery-courier-system.onrender.com` | 🟢 Online |
+| **Interactive API Docs (Swagger)** | `https://real-time-delivery-courier-system.onrender.com/docs` | 🟢 Active |
+| **Health Check** | `https://real-time-delivery-courier-system.onrender.com/health` | 🟢 200 OK |
 
 ---
 
-## 📂 Project Structure
+## 📱 The Applications
 
-```text
-.
-├── backend/                  # FastAPI backend server
-│   ├── app/
-│   │   ├── api/v1/          # REST endpoints (auth, orders, riders, stores, etc.)
-│   │   ├── core/            # Config, security, database engine
-│   │   ├── models/          # SQLAlchemy database models
-│   │   ├── schemas/         # Pydantic validation schemas
-│   │   ├── websocket/       # Real-time WebSocket connection manager
-│   │   └── seed.py          # Database seeder (Kabacan stores, riders, users)
-│   └── requirements.txt
-├── ui/
-│   ├── apps/
-│   │   ├── admin/           # Admin Web Application (Flutter Web)
-│   │   ├── customer/        # Customer Application (iOS / Android / Web)
-│   │   └── rider/           # Rider Application (iOS / Android / Web)
-│   └── packages/
-│       ├── api_client/      # Unified REST & WebSocket API client
-│       ├── auth_session/    # JWT token storage & session manager
-│       ├── design_system/   # Shared UI components, colors, and typography
-│       └── domain_models/   # Shared domain entities & enums
-├── start.sh                  # Interactive macOS/Linux bash launcher
-├── start.bat                 # Windows Command Prompt batch launcher
-├── start.ps1                 # Windows PowerShell multi-app launcher
-├── start.py                  # Cross-platform Python unified launcher
-├── build_apk.bat             # Windows Command Prompt Android APK builder
-├── build_apk.ps1             # Windows PowerShell Android APK builder
-└── README.md
-```
-
----
-
-## ⚙️ Prerequisites
-
-### macOS & Linux
-1. **Flutter SDK** (`>= 3.20.0`): `brew install --cask flutter` or from [flutter.dev](https://flutter.dev)
-2. **Python** (`>= 3.10`): `brew install python` or `sudo apt install python3 python3-pip python3-venv`
-3. **Cloudflare CLI**: `brew install cloudflared` or `sudo apt-get install cloudflared`
-4. **Xcode & Simulators** *(macOS only)*: `xcode-select --install`
-
-### Windows 10/11
-Install all requirements in one PowerShell command via `winget`:
-```powershell
-winget install -e --id Python.Python.3.11
-winget install -e --id Flutter.Flutter
-winget install -e --id Git.Git
-winget install -e --id Cloudflare.cloudflared
-```
-*Note: Make sure to restart your terminal after installing so PATH changes take effect.*
-
----
-
-## 🛠️ One-Click Automated Installation (Setup All Needed Components)
-
-Before starting the system for the first time on a new computer, run the automated installation script. It will inspect your environment, create the Python virtual environment, install all backend packages, seed the database with test accounts and Kabacan stores, enable Flutter Web, and resolve dependencies across all 5 shared packages and 3 client apps.
-
-### macOS & Linux
-```bash
-./install.sh
-```
-*(Or manually run: `python3 install.py`)*
-
-### Windows (Command Prompt)
-Double-click `install.bat` or run:
-```cmd
-install.bat
-```
-
-### Windows (PowerShell)
-```powershell
-.\install.ps1
-```
-
----
-
-## ⚡ Quick Start Launchers
-
-### Option A: macOS / Linux (`./start.sh`)
-```bash
-chmod +x start.sh
-./start.sh
-```
-
-### Option B: Windows Command Prompt (`start.bat`)
-Double-click `start.bat` or run:
-```cmd
-start.bat
-```
-
-### Option C: Windows PowerShell (`.\start.ps1`)
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
-.\start.ps1
-```
-
-### Option D: Cross-Platform Python (`python start.py`)
-```bash
-python start.py
-```
-
----
-
-### What the Launchers Do Automatically:
-1. **Frees all required ports** (`8000`, `3000`, `3001`, `3002`).
-2. **Creates Python virtual environment (`.venv`)** and installs `requirements.txt`.
-3. **Migrates and seeds the database** with Kabacan stores, menu items, sample orders, and accounts.
-4. **Starts the FastAPI Backend** on port `8000`.
-5. **Spawns Cloudflare Tunnels**:
-   - Public Backend API Tunnel (`https://<api-subdomain>.trycloudflare.com`)
-   - Public Admin Console Tunnel (`https://<admin-subdomain>.trycloudflare.com`)
-6. **Launches Flutter Applications**:
-   - On macOS: Boots dual iOS Simulators (iPhone 16 for Customer, iPhone 16 Pro for Rider) and Admin Web.
-   - On Windows/Linux: Launches Admin Web (`:3000`), Customer Web (`:3001`), and Rider Web (`:3002`).
-7. **Configures host header rewriting** (`--http-host-header 0.0.0.0:3000`) so Cloudflare web routing works seamlessly.
-
-### Interactive Controls (in terminal):
-| Key | Action |
-| :--- | :--- |
-| `r` | 🔥 **Hot Reload** all running Flutter applications simultaneously |
-| `R` | 🔄 **Hot Restart** all running Flutter applications |
-| `c` | 🧹 Clear terminal screen |
-| `q` | 🛑 Gracefully stop all apps and shut down Cloudflare tunnels |
-
----
-
-## 🌐 How Cloudflare Tunnels Work
-
-Cloudflare Quick Tunnels (`trycloudflare.com`) expose your local servers securely to the internet without needing port forwarding, dynamic DNS, or public IP addresses.
-
-### 1. Backend API Tunnel
-```bash
-cloudflared tunnel --url http://127.0.0.1:8000
-```
-- Routes public HTTPS traffic to FastAPI.
-- Automatically handles SSL/TLS termination and WebSocket connections (`wss://.../ws/...`).
-
-### 2. Admin Console Web Tunnel
-```bash
-cloudflared tunnel --url http://127.0.0.1:3000 --http-host-header 0.0.0.0:3000
-```
-> [!IMPORTANT]
-> When tunneling Flutter Web (`web-server` or static server), `--http-host-header 0.0.0.0:3000` is required so that incoming requests match the local host header binding.
-
----
-
-## 🗄️ Connecting to Supabase & Migrating All Data
-
-The system supports both local SQLite and **Supabase PostgreSQL** with zero code changes. You can migrate all existing accounts, stores, menu items, orders, deliveries, and telemetry to Supabase in one command.
-
-### Step 1: Run the Supabase Migration Tool
-Run the migration script:
-```bash
-./migrate_to_supabase.py
-```
-Or specify your Supabase PostgreSQL connection string directly:
-```bash
-python migrate_to_supabase.py --target-url "postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres"
-```
-
-### What the Migration Tool Does Automatically:
-1. **Verifies Connectivity**: Tests the connection to your Supabase PostgreSQL cluster.
-2. **Initializes Schema & Tables**: Creates all tables, foreign keys, and indexes on Supabase.
-3. **Migrates All Records**: Transfers data from `mns_delivery.db` in topological FK order (`users`, `rider_profiles`, `addresses`, `stores`, `menu_categories`, `menu_items`, `orders`, `order_items`, `payments`, `deliveries`, `rider_locations`, `refresh_tokens`, `device_tokens`, `outbox_events`, `audit_logs`, `idempotency_keys`).
-4. **Data Integrity Audit**: Runs an automated table-by-table record count comparison between SQLite and Supabase.
-5. **Configures `.env`**: Automatically updates `DATABASE_URL` in your `.env` so the backend immediately connects to Supabase.
-
----
-
-## 🔑 Default Test Credentials
-
-All accounts come pre-seeded and ready to use:
-
-| Role | Email | Password | Access Location |
-| :--- | :--- | :--- | :--- |
-| **Admin** | `admin@mns.com` | `AdminPass123!` | Admin Web Portal (`:3000` / Cloudflare URL) |
-| **Rider** | `rider@mns.com` | `RiderPass123!` | Rider App (`:3002` / Simulator) |
-| **Customer** | `customer@mns.com` | `CustomerPass123!` | Customer App (`:3001` / Simulator) |
-
----
-
-## 🛠 Manual Execution Guide
-
-If you prefer to start components individually in separate terminal tabs:
-
-### 1. Backend & Database Setup
-```bash
-# Set up Python virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r backend/requirements.txt
-
-# Run database migration & seed
-python backend/app/seed.py
-
-# Start FastAPI server
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --app-dir backend
-```
-- Local Docs: `http://localhost:8000/docs`
-
----
-
-### 2. Starting Cloudflare Tunnels
-
-In a new terminal, launch the Backend API Tunnel:
-```bash
-cloudflared tunnel --url http://127.0.0.1:8000
-```
-*Copy the generated URL (e.g., `https://example-api.trycloudflare.com`).*
-
-In another terminal, launch the Admin Console Tunnel:
-```bash
-cloudflared tunnel --url http://127.0.0.1:3000 --http-host-header 0.0.0.0:3000
-```
-*Copy the generated URL (e.g., `https://example-admin.trycloudflare.com`).*
-
----
-
-### 3. Running Flutter Applications
-
-Export your Mapbox access token and public API URL:
-```bash
-export API_URL="https://example-api.trycloudflare.com"
-export MAPBOX_ACCESS_TOKEN="your_mapbox_access_token_here"
-```
-
-#### A. Run Admin Web App
-```bash
-cd ui/apps/admin
-flutter run -d web-server --web-port=3000 --web-hostname=0.0.0.0 \
-  --dart-define=API_BASE_URL=$API_URL \
-  --dart-define=MAPBOX_ACCESS_TOKEN=$MAPBOX_ACCESS_TOKEN
-```
-
-#### B. Run Customer App
-```bash
-cd ui/apps/customer
-# To run on iOS Simulator:
-flutter run -d "iPhone 16" \
-  --dart-define=API_BASE_URL=$API_URL \
-  --dart-define=MAPBOX_ACCESS_TOKEN=$MAPBOX_ACCESS_TOKEN
-
-# Or to run on Web:
-flutter run -d web-server --web-port=3001 --web-hostname=0.0.0.0 \
-  --dart-define=API_BASE_URL=$API_URL \
-  --dart-define=MAPBOX_ACCESS_TOKEN=$MAPBOX_ACCESS_TOKEN
-```
-
-#### C. Run Rider App
-```bash
-cd ui/apps/rider
-# To run on iOS Simulator:
-flutter run -d "iPhone 16 Pro" \
-  --dart-define=API_BASE_URL=$API_URL \
-  --dart-define=MAPBOX_ACCESS_TOKEN=$MAPBOX_ACCESS_TOKEN
-
-# Or to run on Web:
-flutter run -d web-server --web-port=3002 --web-hostname=0.0.0.0 \
-  --dart-define=API_BASE_URL=$API_URL \
-  --dart-define=MAPBOX_ACCESS_TOKEN=$MAPBOX_ACCESS_TOKEN
-```
-
----
-
-## 📱 Application Names, Icons & Metadata
-
-The platform consists of three distinct multi-platform client applications:
-
-| Application | Android / Web Display Name | Package / Application ID | Launcher / Brand Icon | Primary Target | Output Artifact |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **🛍️ Customer App** | `M&S Delivery Customer` | `com.mns.customer.customer_app` | 🛍️ Delivery Dining (`Icons.delivery_dining_rounded` on Primary Orange Gradient) | Android APK, iOS, Web | `build_output\apks\customer-app-release.apk` |
-| **🛵 Rider App** | `M&S Express Courier` | `com.mns.rider.rider_app` | 🛵 Motorcycle Courier (`Icons.two_wheeler_rounded` on Primary Orange Gradient) | Android APK, iOS, Web | `build_output\apks\rider-app-release.apk` |
-| **💻 Admin Portal** | `M&S Delivery Operations Console` | `admin_web_app` | 💻 Operations Shield (`Icons.admin_panel_settings_rounded` on Dark Slate) | Web Dashboard (Desktop/Tablet) | `ui/apps/admin/build/web/` |
-
-### Application Icon & Identity Details
-
-1. **🛍️ Customer App (`M&S Delivery Customer`)**:
-   - **Android Launcher Name**: `M&S Delivery Customer`
-   - **Internal Application ID**: `com.mns.customer.customer_app`
-   - **Launcher Icon**: `@mipmap/ic_launcher` (Branded food delivery dining badge)
-   - **UI Brand Symbol**: `Icons.delivery_dining_rounded` (Orange-to-coral radial gradient)
-   - **Accent Colors**: Vivid Delivery Orange (`#FF5722`), Soft Slate (`#F8FAFC`)
-   - **Purpose**: Food and grocery catalog browsing, cart, order placement, COD checkout, and real-time live map tracking.
-
-2. **🛵 Rider App (`M&S Express Courier`)**:
-   - **Android Launcher Name**: `M&S Express Courier`
-   - **Internal Application ID**: `com.mns.rider.rider_app`
-   - **Launcher Icon**: `@mipmap/ic_launcher` (Branded two-wheeler courier badge)
-   - **UI Brand Symbol**: `Icons.two_wheeler_rounded` (High-visibility delivery rider insignia)
-   - **Accent Colors**: High-Visibility Orange (`#FF5722`), Amber Yellow (`#F59E0B`), Deep Night (`#0F172A`)
-   - **Purpose**: Real-time GPS background telemetry sharing, on-duty shift toggle, order pickup checklists, and delivery completion.
-
-3. **💻 Admin Portal (`M&S Delivery Operations Console`)**:
-   - **Web App Title**: `M&S Delivery | Operations & Dispatch Console`
-   - **PWA / Browser Short Name**: `M&S Admin` (`web/manifest.json`)
-   - **Favicon & Web Icon**: `web/favicon.png` and PWA web icons
-   - **UI Brand Symbol**: `Icons.admin_panel_settings_rounded` (Dark operations cockpit badge)
-   - **Accent Colors**: Dark Modern Charcoal (`#121417`), Neon Brand Orange (`#FF5722`), Emerald Green (`#10B981`)
-   - **Purpose**: Live fleet radar map, order dispatching, store catalog management, sales audit reporting, and rider management.
-
----
-
-## 📦 Production Web Build & Deployment
-
-To build a standalone, optimized production bundle for the Admin Portal:
-
-```bash
-cd ui/apps/admin
-flutter build web --release \
-  --dart-define=API_BASE_URL="https://your-api-domain.com" \
-  --dart-define=MAPBOX_ACCESS_TOKEN="your-mapbox-token"
-```
-
-Serve the output static files (`build/web/`) using any web server or container:
-```bash
-# Using Python static server:
-python3 -m http.server 3000 --directory ui/apps/admin/build/web
-
-# Or using NGINX, Docker, or Cloudflare Pages
-```
-
----
-
-## 📱 Android APK Generation (Windows)
-
-> 💡 **For Complete Beginners:** You do **not** need to type complicated terminal commands! We built an automated 1-click builder (`build_apk.bat`) that does all the work for you.
-
----
-
-### 🟢 Easy 3-Step Guide to Build Your Android App
-
-#### 1️⃣ Step 1: Double-Click the Builder
-In the project folder on your Windows computer, simply **double-click**:
-```
-build_apk.bat
-```
-*(A window will open with a clean, numbered menu).*
-
----
-
-#### 2️⃣ Step 2: Choose Which App You Want
-Type a number and press **Enter**:
-- Press **`1`** for the 🛍️ **Customer App** *(for placing food & delivery orders)*
-- Press **`2`** for the 🛵 **Rider App** *(for delivery riders accepting orders)*
-- Press **`3`** to build **Both Apps**
-
-> 🎯 **Tip:** After typing `1`, `2`, or `3`, simply press **Enter** to accept the defaults! The builder automatically chooses the best settings and connects to the live online staging server:
-> ```
-> https://real-time-delivery-courier-system.onrender.com
-> ```
-
----
-
-#### 3️⃣ Step 3: Get Your Ready-to-Use APK File
-When the build is done, your Android app files will be saved in:
-```
-build_output\apks\
-```
-*(The script will even ask if you want to open this folder in File Explorer automatically!)*
-
-| Application | Android Home Screen Name | Icon | What is it for? | Generated File |
+| Application | Android / Web Display Name | Icon | What is it for? | Ready-to-Use File |
 | :--- | :--- | :---: | :--- | :--- |
-| **Customer App** | `M&S Delivery Customer` | 🛍️ | Ordering food, COD checkout, tracking rider | `customer-app-release.apk` |
-| **Rider App** | `M&S Express Courier` | 🛵 | Accepting jobs, GPS tracking, completing deliveries | `rider-app-release.apk` |
+| **🛍️ Customer App** | `M&S Delivery Customer` | 🛍️ | Browse Kabacan restaurants, cart, COD checkout, live rider GPS tracking | `build_output\apks\customer-app-release.apk` |
+| **🛵 Rider App** | `M&S Express Courier` | 🛵 | On-duty GPS telemetry sharing, accept deliveries, order checklist | `build_output\apks\rider-app-release.apk` |
+| **💻 Admin Portal** | `M&S Delivery Operations Console` | 💻 | Live fleet radar map, order dispatching, store catalog, sales audit | `ui/apps/admin/` (Port 3000) |
 
 ---
 
-### 📲 How to Install the App on Your Phone (3 Simple Steps)
+## 📱 Android APK Generation (Easiest Way to Get the Apps)
 
-1. **Send the APK to your Android phone**:
-   - Plug your phone into your computer via USB and copy the `.apk` file over, **OR**
-   - Upload it to **Google Drive**, or send it to yourself on **Telegram** or **WhatsApp**.
-2. **Open the file on your phone**:
-   - Open your phone's **Files** or **Downloads** app and tap on the `.apk` file.
-3. **Tap Install**:
-   - If your phone displays *"For your security, your phone is not allowed to install unknown apps"*, simply tap **Settings** $\rightarrow$ switch on **Allow from this source** $\rightarrow$ tap **Install**.
-   - 🎉 **Done!** The app icon will appear right on your home screen.
+> 💡 **For Complete Beginners:** You do **not** need to write code or type complicated terminal commands. We created a 1-click builder that compiles the apps and connects to the online staging server automatically.
 
----
+### 🟢 Easy 3-Step Build Guide:
 
-<details>
-<summary><b>🛠️ First-Time Setup & Troubleshooting (Click here if a build fails)</b></summary>
-
-### System Requirements for Windows
-Before building for the very first time, make sure your computer has:
-1. **Flutter SDK**: Run `flutter doctor` in Command Prompt to verify.
-2. **Android Studio**: Installed with Android SDK Command-line Tools.
-3. **Android Licenses Accepted**: In Command Prompt, run:
-   ```cmd
-   flutter doctor --android-licenses
+1. **Double-Click the Builder**:
+   In your project folder on Windows, double-click:
+   ```text
+   build_apk.bat
    ```
-   *(Press `y` to accept all prompts).*
-4. **Java JDK 17**: Ensure `JAVA_HOME` environment variable is set to JDK 17.
 
-### Common Solutions
-- **Error: `Android license status unknown`**: Run `flutter doctor --android-licenses` and accept prompts.
-- **Java Incompatibility**: Flutter Android builds require JDK 17 (`java -version`).
-- **Clean Gradle Cache**: If a previous build was interrupted:
-  ```cmd
-  cd ui\apps\customer
-  flutter clean
-  flutter pub get
-  ```
-</details>
+2. **Choose Which App to Build**:
+   When the menu appears, type a number and press **Enter**:
+   - Press **`1`** for the 🛍️ **Customer App**
+   - Press **`2`** for the 🛵 **Rider App**
+   - Press **`3`** for **Both Apps**  
+   *(Then simply press **Enter** to accept the defaults—it connects to the live server automatically!)*
 
-<details>
-<summary><b>💻 Advanced Options & Command-Line Flags (Click to view)</b></summary>
+3. **Get Your APK File**:
+   When finished, your installer files will be waiting in:
+   ```text
+   build_output\apks\
+   ├── customer-app-release.apk
+   └── rider-app-release.apk
+   ```
 
-### Command Prompt Shortcuts
-Instead of using the interactive menu, you can pass parameters directly:
-```cmd
-:: Build Customer Release APK (targets live staging API)
-build_apk.bat customer
-
-:: Build Rider Release APK
-build_apk.bat rider
-
-:: Build both Customer and Rider in one command
-build_apk.bat all
-
-:: Build Customer Debug APK
-build_apk.bat customer debug
-
-:: Build with a custom local IP (for testing on local Wi-Fi)
-build_apk.bat customer release http://192.168.1.50:8000
-
-:: Build split architecture APKs (smaller individual download sizes)
-build_apk.bat all release --split-per-abi
-```
-
-### Windows PowerShell (`build_apk.ps1`)
-```powershell
-# Interactive wizard:
-.\build_apk.ps1
-
-# Direct CLI parameters:
-.\build_apk.ps1 -App customer
-.\build_apk.ps1 -App rider -Mode release
-.\build_apk.ps1 -App all -OpenFolder
-.\build_apk.ps1 -App customer -ApiUrl "https://real-time-delivery-courier-system.onrender.com"
-.\build_apk.ps1 -App customer -SplitPerAbi
-```
-
-### Install via USB using ADB (Developer Mode)
-If you have **USB Debugging** enabled on your phone and Android platform-tools installed:
-```cmd
-adb install build_output\apks\customer-app-release.apk
-adb install build_output\apks\rider-app-release.apk
-```
-</details>
+### 📲 How to Install on Your Android Phone:
+1. **Send the APK to your phone**: Plug your phone via USB and copy the file over, or upload it to **Google Drive**, **Telegram**, or **WhatsApp**.
+2. **Open the file**: On your phone, tap the `.apk` file in your **Files** or **Downloads** app.
+3. **Tap Install**: If prompted with *"Allow from this source"*, tap **Allow** $\rightarrow$ tap **Install**. 🎉 **Done!**
 
 ---
 
-## 📡 WebSocket & Real-Time Telemetry
+## ⚡ Running the System Locally (1-Click Launchers)
 
-The platform uses WebSockets for instant updates across apps:
+If you want to run the backend and Flutter apps on your computer:
 
-| Channel | Endpoint | Description |
-| :--- | :--- | :--- |
-| **Order Tracking** | `/api/v1/ws/orders/{order_id}` | Broadcasts order status changes (`pending` $\rightarrow$ `assigned` $\rightarrow$ `picked_up` $\rightarrow$ `on_the_way` $\rightarrow$ `delivered`) and live rider GPS coordinates to the Customer app. |
-| **Rider GPS Stream** | `/api/v1/ws/riders/{rider_id}/telemetry` | Ingests real-time latitude, longitude, heading, and speed from the Rider app. |
-| **Admin Dispatch Feed** | `/api/v1/ws/admin/dispatch` | Streams live order creations, assignment events, and live rider positions onto the Admin Live Map. |
+### 1. First-Time Setup (Run Once):
+- **Windows**: Double-click `install.bat`
+- **macOS / Linux**: Run `./install.sh`
+
+### 2. Start Everything:
+- **Windows**: Double-click `start.bat`
+- **macOS / Linux**: Run `./start.sh`
+
+*(The launcher automatically starts the FastAPI server, seeds test data, connects Cloudflare tunnels, and boots the Flutter apps).*
 
 ---
 
-## ❓ Troubleshooting & FAQs
+## 🔑 Default Test Accounts
 
-### 1. `cloudflared` command not found
-Install the CLI via Homebrew (`brew install cloudflared`) or download it from the [Cloudflare Tunnel Documentation](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/).
+All accounts come pre-configured and ready to use:
 
-### 2. Port already in use (8000, 3000, 3001, 3002)
-Run `./start.sh` which automatically frees the ports, or manually kill them:
-```bash
-lsof -ti tcp:8000,3000,3001,3002 | xargs kill -9
-```
+| Role | Email | Password | Used In |
+| :--- | :--- | :--- | :--- |
+| **Admin** | `admin@mns.com` | `AdminPass123!` | Admin Web Portal (`http://localhost:3000`) |
+| **Rider** | `rider@mns.com` | `RiderPass123!` | Rider Mobile App / Simulator |
+| **Customer** | `customer@mns.com` | `CustomerPass123!` | Customer Mobile App / Simulator |
 
-### 3. iOS Simulator not launching
-Make sure Xcode is configured with command line tools:
-```bash
-sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
-sudo xcodebuild -runFirstLaunch
-```
+---
 
-### 4. WebSocket connection issues over Cloudflare
-Ensure the `API_BASE_URL` uses `https://`. The client automatically translates `https://` to `wss://` for WebSocket connections.
+## 📖 In-Depth Technical Documentation
+
+Looking for the complete architecture diagram, manual terminal commands, Cloudflare tunnel configurations, Supabase database migration, or WebSocket telemetry schemas?
+
+👉 **See the comprehensive guide: [SETUP.md](SETUP.md)**
+
+It covers:
+- 🏛️ Full System Architecture & Mermaid Flowcharts
+- 📂 Complete Project Structure & File Tree
+- 🛠️ Step-by-Step Manual Execution Guide (FastAPI, uvicorn, Flutter CLI)
+- 🌐 Cloudflare Tunnels Deep Dive & Host-Header Rewriting
+- 🗄️ One-Click Supabase PostgreSQL Migration
+- 📦 Production Web Bundle Compilation
+- 📡 WebSocket Channels & Real-Time Telemetry Payloads
+- ❓ Full Developer Troubleshooting & FAQ
 
 ---
 
