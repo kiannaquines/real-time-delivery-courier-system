@@ -18,7 +18,7 @@ class _CartScreenState extends State<CartScreen> {
   Address? _selectedAddress;
   List<Address> _savedAddresses = [];
   bool _isLoadingAddresses = true;
-  final _notesCtrl = TextEditingController(text: 'Near USM Gate 1');
+  final _notesCtrl = TextEditingController();
   bool _isSubmitting = false;
   String? _error;
 

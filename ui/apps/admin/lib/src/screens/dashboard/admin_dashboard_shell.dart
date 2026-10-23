@@ -275,7 +275,7 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
                                           ),
                                         ),
                                         Text(
-                                          user?.email ?? 'admin@mns.com',
+                                          user?.email ?? '',
                                           style: const TextStyle(
                                             fontSize: 12,
                                             color: AppColors.textMuted,

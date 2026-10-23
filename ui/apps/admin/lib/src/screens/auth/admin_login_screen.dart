@@ -11,8 +11,8 @@ class AdminLoginScreen extends StatefulWidget {
 }
 
 class _AdminLoginScreenState extends State<AdminLoginScreen> {
-  final _emailCtrl = TextEditingController(text: 'admin@mns.com');
-  final _passwordCtrl = TextEditingController(text: 'AdminPass123!');
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
   bool _isLoading = false;
   String? _error;
 
@@ -122,7 +122,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                         AppTextField(
                           controller: _emailCtrl,
                           label: 'EMAIL',
-                          hintText: 'admin@mns.com',
+                          hintText: 'Enter admin email',
                           keyboardType: TextInputType.emailAddress,
                           prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textSecondary),
                         ),

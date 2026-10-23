@@ -293,9 +293,9 @@ class _AdminLiveMapScreenState extends State<AdminLiveMapScreen> {
                         child: _buildMapPin(
                           icon: Icons.two_wheeler_rounded,
                           color: AppColors.brandPrimary,
-                          label: '${_selectedRider != null ? "Carlos Swift" : "Rider"} (Live)',
+                          label: '${_selectedRider?.fullName ?? "Rider"} (Live)',
                           isPulsing: true,
-                          onTap: () => _showDetailsModal('Rider: Carlos Swift', 'Yamaha NMAX 155 (Plate MNS-7788)', 'Live Location Active\nSpeed: 28 km/h • Route active'),
+                          onTap: () => _showDetailsModal('Rider: ${_selectedRider?.fullName ?? "Active Courier"}', 'Fleet Motorcycle (${_selectedRider?.plateNumber ?? "En Route"})', 'Live Location Active\nTelemetry active'),
                         ),
                       ),
                     ],

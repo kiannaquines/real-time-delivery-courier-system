@@ -127,7 +127,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   Widget _buildHomeDashboard(CartState cart) {
     final auth = context.watch<AuthSessionManager>();
-    final userName = auth.currentUser?.fullName.split(' ').first ?? 'Alice';
+    final userName = (auth.currentUser?.fullName.isNotEmpty == true)
+        ? auth.currentUser!.fullName.split(' ').first
+        : 'there';
 
     final filteredStores = _stores.where((s) {
       if (_searchQuery.isEmpty) return true;

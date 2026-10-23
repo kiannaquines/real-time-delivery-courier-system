@@ -47,19 +47,19 @@ class RiderProfileScreen extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      rider != null && rider.fullName.isNotEmpty ? rider.fullName[0].toUpperCase() : 'C',
+                      rider != null && rider.fullName.isNotEmpty ? rider.fullName[0].toUpperCase() : 'R',
                       style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 32, color: Colors.white),
                     ),
                   ),
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  rider?.fullName ?? 'Carlos Swift',
+                  rider?.fullName ?? 'Rider',
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.textPrimary),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  rider?.email ?? 'rider@mns.com',
+                  rider?.email ?? '',
                   style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 12),

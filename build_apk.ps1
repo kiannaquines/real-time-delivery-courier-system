@@ -73,7 +73,7 @@ if (-not $FlutterCmd) {
 }
 
 # 2. Read Defaults from .env
-$DefaultApiUrl = "http://localhost:8000"
+$DefaultApiUrl = "https://real-time-delivery-courier-system.onrender.com"
 $DefaultMapboxToken = "pk.eyJ1IjoiamVhcmFyZCIsImEiOiJjbWE2ZjNlM2YwM2wyMmlvYW9mdDQ5OHJ5In0.57WdNE6fCl-qVJAoMZe40Q"
 
 $EnvFile = Join-Path $ProjectRoot ".env"

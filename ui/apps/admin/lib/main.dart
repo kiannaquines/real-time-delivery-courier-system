@@ -9,7 +9,7 @@ import 'src/screens/dashboard/admin_dashboard_shell.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  const apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8000');
+  const apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'https://real-time-delivery-courier-system.onrender.com');
 
   final apiClient = ApiClient(baseUrl: apiBaseUrl);
   final authSession = AuthSessionManager(apiClient: apiClient);

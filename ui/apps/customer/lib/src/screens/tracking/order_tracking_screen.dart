@@ -609,11 +609,11 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                         const Text('YOUR RIDER', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.textMuted, letterSpacing: 0.6)),
                         const SizedBox(height: 2),
                         Text(
-                          delivery?.riderName ?? 'Carlos Swift',
+                          delivery?.riderName ?? 'Assigned Courier',
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.textPrimary),
                         ),
                         const SizedBox(height: 2),
-                        const Text('Yamaha NMAX 155 • Plate MNS-7788', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        const Text('Active Delivery Fleet • On Route', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
@@ -623,7 +623,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                     tooltip: 'Call Rider',
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Calling rider (+63 917 123 4567)...')),
+                        const SnackBar(content: Text('Contacting assigned courier...')),
                       );
                     },
                   ),

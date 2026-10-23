@@ -11,8 +11,8 @@ class RiderLoginScreen extends StatefulWidget {
 }
 
 class _RiderLoginScreenState extends State<RiderLoginScreen> {
-  final _emailCtrl = TextEditingController(text: 'rider@mns.com');
-  final _passwordCtrl = TextEditingController(text: 'RiderPass123!');
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _error;
@@ -38,14 +38,6 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _fillDemoAccount() {
-    setState(() {
-      _emailCtrl.text = 'rider@mns.com';
-      _passwordCtrl.text = 'RiderPass123!';
-      _error = null;
-    });
   }
 
   @override
@@ -161,7 +153,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                           AppTextField(
                             controller: _emailCtrl,
                             label: 'EMAIL',
-                            hintText: 'rider@mns.com',
+                            hintText: 'Enter your rider email',
                             keyboardType: TextInputType.emailAddress,
                             prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.brandPrimary, size: 20),
                           ),
@@ -183,33 +175,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                             ),
                           ),
-                          const SizedBox(height: 20),
-
-                          // Demo Autofill Pill
-                          InkWell(
-                            onTap: _fillDemoAccount,
-                            borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Wrap(
-                                alignment: WrapAlignment.center,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                spacing: 6,
-                                children: [
-                                  Icon(Icons.bolt_rounded, size: 16, color: AppColors.brandPrimary),
-                                  Text(
-                                    'Fill Demo: rider@mns.com',
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 12),
 
                           // Start Shift Button
                           AppButton(

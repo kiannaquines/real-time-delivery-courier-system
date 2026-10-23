@@ -48,7 +48,7 @@ class _AdminRidersScreenState extends State<AdminRidersScreen> {
     final nameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
-    final passCtrl = TextEditingController(text: 'RiderPass123!');
+    final passCtrl = TextEditingController();
     final plateCtrl = TextEditingController();
 
     final confirmed = await showDialog<bool>(

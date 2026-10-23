@@ -34,7 +34,7 @@ if %errorlevel% neq 0 (
 )
 
 REM 2. Read Default Configuration from .env if present
-set "API_URL=http://localhost:8000"
+set "API_URL=https://real-time-delivery-courier-system.onrender.com"
 set "MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoiamVhcmFyZCIsImEiOiJjbWE2ZjNlM2YwM2wyMmlvYW9mdDQ5OHJ5In0.57WdNE6fCl-qVJAoMZe40Q"
 
 if exist "%PROJECT_ROOT%.env" (
